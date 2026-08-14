@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' file: data: https:; style-src 'self'; script-src 'self'; media-src 'self' file: data:">
+  <title>NeoPet AI</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main id="loginView" class="screen auth-screen">
+    <section class="glass auth-card">
+      <div class="brand-mark" aria-hidden="true"><span></span><span></span></div>
+      <p class="eyebrow">NEOPET AI</p>
+      <h1>唤醒你的 AI 桌宠</h1>
+      <p class="muted">使用邮箱验证码进入，让桌宠记住你们的对话和设定。</p>
+      <label>邮箱</label>
+      <input id="emailInput" type="email" autocomplete="email" placeholder="name@example.com">
+      <button id="sendCodeButton" class="primary">发送验证码</button>
+      <div id="codeArea" class="hidden">
+        <label>6 位验证码</label>
+        <input id="codeInput" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="000000">
+        <button id="verifyCodeButton" class="primary">登录</button>
+      </div>
+      <p id="authStatus" class="status"></p>
+    </section>
+  </main>
+
+  <main id="petView" class="screen pet-screen hidden">
+    <header class="titlebar glass">
+      <div class="drag-region"><span class="online-dot"></span><strong id="petTitle">小诺</strong></div>
+      <nav class="window-actions">
+        <button id="compactButton" class="icon-button" title="只显示桌宠">◌</button>
+        <button id="settingsButton" class="icon-button" title="设置">⚙</button>
+        <button id="hideButton" class="icon-button" title="隐藏">−</button>
+      </nav>
+    </header>
+
+    <section id="petStage" class="pet-stage state-idle" data-emotion="neutral">
+      <div id="speechBubble" class="speech-bubble hidden"></div>
+      <div id="defaultPet" class="pet-art" role="button" tabindex="0" aria-label="AI 桌宠">
+        <div class="tail"></div>
+        <div class="body"><div class="belly"></div></div>
+        <div class="arm arm-left"></div><div class="arm arm-right"></div>
+        <div class="head">
+          <div class="ear ear-left"></div><div class="ear ear-right"></div>
+          <div class="face">
+            <div class="eye eye-left"></div><div class="eye eye-right"></div>
+            <div class="blush blush-left"></div><div class="blush blush-right"></div>
+            <div class="mouth"></div>
+          </div>
+        </div>
+        <div class="shadow"></div>
+      </div>
+      <img id="customPet" class="custom-pet hidden" alt="自定义 AI 桌宠">
+      <p id="petStateLabel" class="pet-state-label">空闲</p>
+    </section>
+
+    <section id="chatPanel" class="glass chat-panel">
+      <div id="messages" class="messages" aria-live="polite">
+        <div class="message pet-message">你好，我会听、会说，也会根据回答做动作。</div>
+      </div>
+      <form id="chatForm" class="composer">
+        <button id="micButton" class="round-button" type="button" title="语音输入">●</button>
+        <textarea id="messageInput" rows="1" placeholder="和桌宠说点什么…"></textarea>
+        <button id="sendButton" class="round-button send" type="submit" title="发送">➤</button>
+      </form>
+    </section>
+
+    <aside id="settingsPanel" class="glass settings-panel hidden">
+      <div class="panel-heading"><div><p class="eyebrow">CONTROL CENTER</p><h2>桌宠设置</h2></div><button id="closeSettingsButton" class="icon-button">×</button></div>
+      <div class="settings-scroll">
+        <section class="setting-group">
+          <h3>角色</h3>
+          <label>名字</label><input id="petNameInput" maxlength="30">
+          <label>性格和说话方式</label><textarea id="personalityInput" rows="3"></textarea>
+          <div class="button-row"><button id="importAvatarButton" class="secondary" type="button">导入图片</button><button id="restoreAvatarButton" class="secondary" type="button">恢复默认</button></div>
+        </section>
+        <section class="setting-group">
+          <h3>AI 接口</h3>
+          <label>OpenAI 兼容 API 地址</label><input id="baseUrlInput" placeholder="https://api.openai.com/v1">
+          <label>聊天模型</label><input id="modelInput" placeholder="填写服务商提供的模型名称">
+          <label>图像模型</label><input id="imageModelInput" placeholder="用于生成桌宠，可暂时留空">
+          <label>API 密钥</label><input id="apiKeyInput" type="password" placeholder="已加密保存在系统安全存储">
+          <p id="apiKeyHint" class="hint"></p>
+        </section>
+        <section class="setting-group">
+          <h3>AI 生成桌宠</h3>
+          <textarea id="petPromptInput" rows="4" placeholder="例如：原创的太空猫助手，复古动画氛围，蓝紫配色；不要复制现有角色"></textarea>
+          <button id="generatePetButton" class="primary" type="button">生成原创桌宠</button>
+          <p class="hint">电影和动画只能作为风格灵感，生成结果应保持原创。</p>
+        </section>
+        <section class="setting-group">
+          <h3>声音</h3>
+          <label>系统声音</label><select id="voiceSelect"><option value="">自动选择</option></select>
+          <label>语速 <span id="speechRateValue">1.0</span></label><input id="speechRateInput" type="range" min="0.7" max="1.5" step="0.1" value="1">
+        </section>
+        <button id="saveSettingsButton" class="primary" type="button">保存设置</button>
+        <button id="clearMemoryButton" class="secondary danger" type="button">清除对话记忆</button>
+        <button id="logoutButton" class="text-button" type="button">退出当前邮箱</button>
+        <p id="settingsStatus" class="status"></p>
+      </div>
+    </aside>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

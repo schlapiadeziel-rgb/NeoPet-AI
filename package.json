@@ -1,0 +1,60 @@
+{
+  "name": "neopet-ai",
+  "version": "0.1.0",
+  "description": "AI desktop pet with voice, actions, cloud API, and optional local model endpoints",
+  "main": "src/main/main.js",
+  "license": "MIT",
+  "author": "NeoPet AI",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test",
+    "pack:dir": "electron-builder --dir",
+    "pack:win": "electron-builder --win nsis portable",
+    "pack:mac": "electron-builder --mac dmg",
+    "pack:linux": "electron-builder --linux AppImage"
+  },
+  "dependencies": {
+    "nodemailer": "^9.0.5"
+  },
+  "devDependencies": {
+    "electron": "^43.4.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "ai.neopet.desktop",
+    "productName": "NeoPet AI",
+    "asar": true,
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "package.json",
+      "LICENSE"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "artifactName": "NeoPet-AI-Setup-${version}-${arch}.${ext}",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "portable": {
+      "artifactName": "NeoPet-AI-Portable-${version}-${arch}.${ext}"
+    },
+    "mac": {
+      "target": ["dmg"],
+      "category": "public.app-category.entertainment"
+    },
+    "linux": {
+      "target": ["AppImage"],
+      "category": "Utility"
+    }
+  }
+}
