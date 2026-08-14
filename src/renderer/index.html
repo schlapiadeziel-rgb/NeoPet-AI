@@ -38,25 +38,12 @@
 
     <section id="petStage" class="pet-stage state-idle" data-emotion="neutral">
       <div id="speechBubble" class="speech-bubble hidden"></div>
-      <div id="defaultPet" class="pet-art" role="button" tabindex="0" aria-label="AI 桌宠">
-        <div class="tail"></div>
-        <div class="body"><div class="belly"></div></div>
-        <div class="arm arm-left"></div><div class="arm arm-right"></div>
-        <div class="head">
-          <div class="ear ear-left"></div><div class="ear ear-right"></div>
-          <div class="face">
-            <div class="eye eye-left"></div><div class="eye eye-right"></div>
-            <div class="blush blush-left"></div><div class="blush blush-right"></div>
-            <div class="mouth"></div>
-          </div>
-        </div>
-        <div class="shadow"></div>
-      </div>
+      <div id="defaultPet" class="pet-art sprite-pet" role="button" tabindex="0" aria-label="AI 桌宠小诺"></div>
       <img id="customPet" class="custom-pet hidden" alt="自定义 AI 桌宠">
       <p id="petStateLabel" class="pet-state-label">空闲</p>
     </section>
 
-    <section id="chatPanel" class="glass chat-panel">
+    <section id="chatPanel" class="glass chat-panel hidden">
       <div id="messages" class="messages" aria-live="polite">
         <div class="message pet-message">你好，我会听、会说，也会根据回答做动作。</div>
       </div>
@@ -92,6 +79,7 @@
         </section>
         <section class="setting-group">
           <h3>声音</h3>
+          <label>回复与识别语言</label><select id="languageSelect"><option value="auto">自动识别</option><option value="zh-CN">中文</option><option value="en-US">English</option><option value="ja-JP">日本語</option><option value="ko-KR">한국어</option></select>
           <label>系统声音</label><select id="voiceSelect"><option value="">自动选择</option></select>
           <label>语速 <span id="speechRateValue">1.0</span></label><input id="speechRateInput" type="range" min="0.7" max="1.5" step="0.1" value="1">
         </section>

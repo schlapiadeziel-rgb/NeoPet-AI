@@ -9,15 +9,34 @@ const elements = {
   closeSettings: $("#closeSettingsButton"), petTitle: $("#petTitle"), petName: $("#petNameInput"), personality: $("#personalityInput"),
   baseUrl: $("#baseUrlInput"), model: $("#modelInput"), imageModel: $("#imageModelInput"), apiKey: $("#apiKeyInput"),
   apiKeyHint: $("#apiKeyHint"), petPrompt: $("#petPromptInput"), generatePet: $("#generatePetButton"), importAvatar: $("#importAvatarButton"),
-  restoreAvatar: $("#restoreAvatarButton"), voice: $("#voiceSelect"), speechRate: $("#speechRateInput"), speechRateValue: $("#speechRateValue"),
+  restoreAvatar: $("#restoreAvatarButton"), language: $("#languageSelect"), voice: $("#voiceSelect"), speechRate: $("#speechRateInput"), speechRateValue: $("#speechRateValue"),
   saveSettings: $("#saveSettingsButton"), clearMemory: $("#clearMemoryButton"), logout: $("#logoutButton"), settingsStatus: $("#settingsStatus")
 };
 
 let appState;
 let conversation = [];
-let compactMode = false;
+let compactMode = true;
 let idleTimer;
+let idleMotionTimer;
 let recognition;
+let spriteTimer;
+let lookResetTimer;
+let currentPetState = "idle";
+
+const spriteStates = {
+  idle: { row: 0, frames: 6, interval: 480 },
+  "running-right": { row: 1, frames: 8, interval: 95 },
+  "running-left": { row: 2, frames: 8, interval: 95 },
+  wave: { row: 3, frames: 4, interval: 170 },
+  happy: { row: 4, frames: 5, interval: 135 },
+  dance: { row: 4, frames: 5, interval: 115 },
+  failed: { row: 5, frames: 8, interval: 180 },
+  sleep: { row: 5, frames: 8, interval: 310 },
+  listening: { row: 6, frames: 6, interval: 235 },
+  thinking: { row: 7, frames: 6, interval: 145 },
+  nod: { row: 7, frames: 6, interval: 170 },
+  speaking: { row: 8, frames: 6, interval: 125 }
+};
 
 const stateLabels = {
   idle: "空闲", listening: "正在听", thinking: "正在思考", speaking: "正在回答", happy: "开心",
@@ -34,20 +53,71 @@ function showAuthenticated(authenticated) {
   elements.petView.classList.toggle("hidden", !authenticated);
 }
 
+function showSpriteFrame(row, column) {
+  elements.defaultPet.style.backgroundPosition = `${(column / 7) * 100}% ${(row / 10) * 100}%`;
+}
+
+function animateSprite(state) {
+  clearInterval(spriteTimer);
+  const animation = spriteStates[state] || spriteStates.idle;
+  let frame = 0;
+  showSpriteFrame(animation.row, frame);
+  spriteTimer = setInterval(() => {
+    frame = (frame + 1) % animation.frames;
+    showSpriteFrame(animation.row, frame);
+  }, animation.interval);
+}
+
 function applyPetState(name = "idle", emotion = "neutral") {
   const normalized = name === "speak" ? "speaking" : name === "think" ? "thinking" : name;
+  currentPetState = normalized;
   [...elements.petStage.classList].filter((value) => value.startsWith("state-")).forEach((value) => elements.petStage.classList.remove(value));
   elements.petStage.classList.add(`state-${normalized}`);
   elements.petStage.dataset.emotion = emotion;
   elements.petStateLabel.textContent = stateLabels[normalized] || "陪伴中";
+  animateSprite(normalized);
 }
 
 function scheduleIdle() {
   clearTimeout(idleTimer);
+  clearTimeout(idleMotionTimer);
+  const startedAt = Date.now();
+  const idleMotions = [
+    { action: "wave", emotion: "happy", label: "向你挥手" },
+    { action: "nod", emotion: "curious", label: "看看你在做什么" },
+    { action: "happy", emotion: "happy", label: "心情不错" },
+    { action: "dance", emotion: "excited", label: "偷偷活动一下" }
+  ];
+  const playIdleMotion = () => {
+    if (Date.now() - startedAt >= 55_000) return;
+    const motion = idleMotions[Math.floor(Math.random() * idleMotions.length)];
+    applyPetState(motion.action, motion.emotion);
+    elements.petStateLabel.textContent = motion.label;
+    setTimeout(() => applyPetState("idle", "neutral"), motion.action === "dance" ? 3800 : 2400);
+    idleMotionTimer = setTimeout(playIdleMotion, 12_000 + Math.random() * 10_000);
+  };
+  idleMotionTimer = setTimeout(playIdleMotion, 10_000 + Math.random() * 8_000);
   idleTimer = setTimeout(() => {
+    clearTimeout(idleMotionTimer);
     applyPetState("sleep", "neutral");
     showBubble("呼…我先眯一会儿。", 3500);
   }, 60_000);
+}
+
+async function setPetMode(compact, focusChat = false) {
+  compactMode = Boolean(compact);
+  elements.petView.classList.toggle("compact-mode", compactMode);
+  elements.chatPanel.classList.toggle("hidden", compactMode);
+  elements.settingsPanel.classList.add("hidden");
+  await window.neopet.window.setCompact(compactMode);
+  if (!compactMode && focusChat) elements.messageInput.focus();
+}
+
+function openSettingsPanel() {
+  setPetMode(false).then(() => {
+    populateSettings();
+    elements.settingsPanel.classList.remove("hidden");
+  });
 }
 
 function showBubble(text, duration = 0) {
@@ -77,6 +147,7 @@ function populateSettings() {
   elements.baseUrl.value = appState.ai.baseUrl;
   elements.model.value = appState.ai.model;
   elements.imageModel.value = appState.ai.imageModel;
+  elements.language.value = appState.pet.language || "auto";
   elements.apiKey.value = "";
   elements.apiKeyHint.textContent = appState.ai.hasApiKey ? "设备中已有加密密钥；留空可继续使用。" : "密钥将使用操作系统安全存储加密。";
   elements.speechRate.value = appState.pet.speechRate;
@@ -91,9 +162,10 @@ async function saveSettings() {
   try {
     appState = await window.neopet.state.save({
       ai: { baseUrl: elements.baseUrl.value, model: elements.model.value, imageModel: elements.imageModel.value, apiKey: elements.apiKey.value },
-      pet: { name: elements.petName.value, personality: elements.personality.value, voiceName: elements.voice.value, speechRate: elements.speechRate.value }
+      pet: { name: elements.petName.value, personality: elements.personality.value, language: elements.language.value, voiceName: elements.voice.value, speechRate: elements.speechRate.value }
     });
     populateSettings();
+    setupSpeechRecognition();
     setStatus(elements.settingsStatus, "设置已保存");
     return true;
   } catch (error) {
@@ -114,8 +186,10 @@ function speak(text, action, emotion) {
   utterance.rate = Number(appState.pet.speechRate || 1);
   const voices = speechSynthesis.getVoices();
   const preferred = voices.find((voice) => voice.name === appState.pet.voiceName);
-  const languageMatch = voices.find((voice) => text.match(/[\u4e00-\u9fff]/) ? voice.lang.toLowerCase().startsWith("zh") : voice.lang.toLowerCase().startsWith("en"));
+  const requestedLanguage = appState.pet.language && appState.pet.language !== "auto" ? appState.pet.language.toLowerCase().split("-")[0] : "";
+  const languageMatch = voices.find((voice) => requestedLanguage ? voice.lang.toLowerCase().startsWith(requestedLanguage) : (text.match(/[\u4e00-\u9fff]/) ? voice.lang.toLowerCase().startsWith("zh") : voice.lang.toLowerCase().startsWith("en")));
   utterance.voice = preferred || languageMatch || null;
+  if (appState.pet.language && appState.pet.language !== "auto") utterance.lang = appState.pet.language;
   utterance.onstart = () => { applyPetState(motion, emotion); elements.petStage.classList.add("is-talking"); };
   utterance.onend = () => {
     elements.petStage.classList.remove("is-talking");
@@ -160,7 +234,7 @@ function setupSpeechRecognition() {
   recognition = new Recognition();
   recognition.continuous = false;
   recognition.interimResults = true;
-  recognition.lang = navigator.language || "zh-CN";
+  recognition.lang = appState?.pet?.language && appState.pet.language !== "auto" ? appState.pet.language : (navigator.language || "zh-CN");
   recognition.onstart = () => { elements.mic.classList.add("listening"); applyPetState("listening", "curious"); showBubble("我在听…"); };
   recognition.onresult = (event) => {
     elements.messageInput.value = [...event.results].map((item) => item[0].transcript).join("");
@@ -184,13 +258,16 @@ function populateVoices() {
 
 async function initialize() {
   appState = await window.neopet.state.get();
-  showAuthenticated(Boolean(appState.session));
+  const authenticated = Boolean(appState.session);
+  showAuthenticated(authenticated);
   conversation = (appState.memory || []).map(({ role, content }) => ({ role, content })).slice(-16);
   populateSettings();
   populateVoices();
   speechSynthesis.onvoiceschanged = populateVoices;
   setupSpeechRecognition();
+  applyPetState("idle", "neutral");
   scheduleIdle();
+  if (authenticated) await setPetMode(true);
 }
 
 elements.sendCode.addEventListener("click", async () => {
@@ -215,6 +292,7 @@ elements.verifyCode.addEventListener("click", async () => {
     appState = await window.neopet.state.get();
     showAuthenticated(true);
     populateSettings();
+    await setPetMode(true);
   } catch (error) {
     setStatus(elements.authStatus, error.message, true);
   } finally {
@@ -246,12 +324,16 @@ function enablePetDrag(element) {
       const dx = next.screenX - startX;
       const dy = next.screenY - startY;
       if (Math.abs(dx) + Math.abs(dy) > 5) moved = true;
-      if (moved) window.neopet.window.moveTo(windowX + dx, windowY + dy);
+      if (moved) {
+        if (element === elements.defaultPet) animateSprite(dx < 0 ? "running-left" : "running-right");
+        window.neopet.window.moveTo(windowX + dx, windowY + dy);
+      }
     };
     const finish = () => {
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", finish);
       if (!moved) touchPet();
+      else if (element === elements.defaultPet) applyPetState("idle", "neutral");
     };
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", finish, { once: true });
@@ -260,21 +342,28 @@ function enablePetDrag(element) {
 enablePetDrag(elements.defaultPet);
 enablePetDrag(elements.customPet);
 elements.defaultPet.addEventListener("keydown", (event) => { if (event.key === "Enter") touchPet(); });
+elements.defaultPet.addEventListener("dblclick", () => setPetMode(false, true));
+elements.customPet.addEventListener("dblclick", () => setPetMode(false, true));
+elements.petStage.addEventListener("pointermove", (event) => {
+  if (currentPetState !== "idle" || elements.defaultPet.classList.contains("hidden") || event.buttons) return;
+  const rect = elements.defaultPet.getBoundingClientRect();
+  const dx = event.clientX - (rect.left + rect.width / 2);
+  const dy = event.clientY - (rect.top + rect.height / 2);
+  let angle = Math.atan2(dx, -dy) * 180 / Math.PI;
+  if (angle < 0) angle += 360;
+  const direction = Math.round(angle / 22.5) % 16;
+  clearInterval(spriteTimer);
+  showSpriteFrame(direction < 8 ? 9 : 10, direction < 8 ? direction : direction - 8);
+  clearTimeout(lookResetTimer);
+  lookResetTimer = setTimeout(() => animateSprite("idle"), 850);
+});
+elements.petStage.addEventListener("contextmenu", (event) => { event.preventDefault(); openSettingsPanel(); });
 
-elements.settings.addEventListener("click", () => { elements.settingsPanel.classList.remove("hidden"); populateSettings(); });
+elements.settings.addEventListener("click", openSettingsPanel);
 elements.closeSettings.addEventListener("click", () => elements.settingsPanel.classList.add("hidden"));
 elements.hide.addEventListener("click", () => window.neopet.window.hide());
-elements.compact.addEventListener("click", async () => {
-  compactMode = !compactMode;
-  elements.chatPanel.classList.toggle("hidden", compactMode);
-  await window.neopet.window.setCompact(compactMode);
-});
-window.neopet.onOpenChat(() => {
-  compactMode = false;
-  elements.chatPanel.classList.remove("hidden");
-  window.neopet.window.setCompact(false);
-  elements.messageInput.focus();
-});
+elements.compact.addEventListener("click", () => setPetMode(!compactMode, compactMode));
+window.neopet.onOpenChat(() => setPetMode(false, true));
 
 elements.speechRate.addEventListener("input", () => { elements.speechRateValue.textContent = Number(elements.speechRate.value).toFixed(1); });
 elements.saveSettings.addEventListener("click", saveSettings);
@@ -316,6 +405,10 @@ elements.logout.addEventListener("click", async () => {
   appState.session = null;
   elements.settingsPanel.classList.add("hidden");
   showAuthenticated(false);
+  compactMode = false;
+  elements.petView.classList.remove("compact-mode");
+  elements.chatPanel.classList.remove("hidden");
+  await window.neopet.window.setCompact(false);
 });
 
 initialize().catch((error) => setStatus(elements.authStatus, `启动失败：${error.message}`, true));

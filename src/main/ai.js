@@ -30,10 +30,12 @@ function buildSystemPrompt(pet) {
 }
 
 async function chat({ config, apiKey, pet, messages }) {
-  if (!config.baseUrl || !config.model || !apiKey) throw new Error("请先在设置中填写 API 地址、模型名称和 API 密钥");
+  if (!config.baseUrl || !config.model) throw new Error("请先在设置中填写 API 地址和模型名称");
+  const headers = { "Content-Type": "application/json" };
+  if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
   const body = await requestJson(`${config.baseUrl}/chat/completions`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+    headers,
     body: JSON.stringify({
       model: config.model,
       temperature: 0.8,
@@ -46,12 +48,14 @@ async function chat({ config, apiKey, pet, messages }) {
 }
 
 async function generatePet({ config, apiKey, prompt, outputDirectory }) {
-  if (!config.baseUrl || !config.imageModel || !apiKey) throw new Error("请先填写 API 地址、图像模型和 API 密钥");
+  if (!config.baseUrl || !config.imageModel) throw new Error("请先填写 API 地址和图像模型");
   const safePrompt = String(prompt || "").trim().slice(0, 1500);
   if (!safePrompt) throw new Error("请描述想生成的宠物");
+  const headers = { "Content-Type": "application/json" };
+  if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
   const body = await requestJson(`${config.baseUrl}/images/generations`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+    headers,
     body: JSON.stringify({
       model: config.imageModel,
       prompt: `Create one original full-body desktop pet character on a transparent background. Centered, no text, clean silhouette, suitable for subtle animation. Use the following only as high-level inspiration and do not copy copyrighted characters: ${safePrompt}`,

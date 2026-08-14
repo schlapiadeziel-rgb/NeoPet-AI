@@ -1,0 +1,448 @@
+:root {
+  color-scheme: dark;
+  --ink: #faf9ff;
+  --muted: #aaa7bc;
+  --panel: rgba(28, 23, 46, 0.88);
+  --line: rgba(255, 255, 255, 0.11);
+  --violet: #8067ff;
+  --cyan: #58dbd3;
+}
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  min-height: 100%;
+  margin: 0;
+  background: radial-gradient(
+    circle at 50% 0,
+    #312457 0,
+    #151126 42%,
+    #090711 100%
+  );
+  color: var(--ink);
+  font-family: Inter, "Microsoft YaHei UI", system-ui, sans-serif;
+}
+body {
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+    env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+.hidden {
+  display: none !important;
+}
+.app-shell {
+  width: min(100%, 720px);
+  min-height: 100dvh;
+  margin: auto;
+  padding: 18px 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.topbar h1 {
+  margin: 0;
+  font-size: 24px;
+}
+.eyebrow {
+  margin: 0 0 3px;
+  color: var(--cyan);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+}
+.top-actions {
+  display: flex;
+  gap: 8px;
+}
+.icon,
+.ghost,
+.quick-actions button,
+.secondary {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.07);
+}
+.icon {
+  width: 42px;
+  height: 42px;
+  font-size: 20px;
+}
+.ghost {
+  padding: 0 14px;
+}
+.pet-stage {
+  position: relative;
+  min-height: 340px;
+  display: grid;
+  place-items: end center;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 32px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.04),
+    rgba(255, 255, 255, 0.015)
+  );
+  box-shadow: 0 22px 70px rgba(0, 0, 0, 0.28);
+}
+.pet,
+.custom-pet {
+  position: relative;
+  width: 210px;
+  height: 260px;
+  margin-bottom: 32px;
+  transform-origin: 50% 90%;
+  filter: drop-shadow(0 18px 24px rgba(0, 0, 0, 0.3));
+  touch-action: manipulation;
+}
+.custom-pet {
+  object-fit: contain;
+}
+.sprite-pet {
+  width: 210px;
+  height: 228px;
+  background: url("assets/pets/xiaonuo/spritesheet.webp") 0 0 / 800% 1100% no-repeat;
+  image-rendering: pixelated;
+  will-change: background-position;
+}
+.pet-head {
+  position: absolute;
+  z-index: 3;
+  left: 31px;
+  top: 31px;
+  width: 148px;
+  height: 126px;
+  border-radius: 48%;
+  background: linear-gradient(145deg, #b7a9ff, #7762e9);
+}
+.ears:before,
+.ears:after {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  top: 10px;
+  width: 65px;
+  height: 75px;
+  border-radius: 15px 50px 15px 48px;
+  background: #a998ff;
+}
+.ears:before {
+  left: 22px;
+  transform: rotate(-18deg);
+}
+.ears:after {
+  right: 22px;
+  transform: scaleX(-1) rotate(-18deg);
+}
+.pet-body {
+  position: absolute;
+  z-index: 2;
+  left: 52px;
+  bottom: 15px;
+  width: 108px;
+  height: 126px;
+  border-radius: 48% 48% 38% 38%;
+  background: linear-gradient(145deg, #9683ff, #5f49cf);
+}
+.eye {
+  position: absolute;
+  top: 53px;
+  width: 19px;
+  height: 27px;
+  border-radius: 50%;
+  background: #171222;
+  box-shadow: inset 5px 4px 0 -1px #fff;
+  animation: blink 5.5s infinite;
+}
+.eye.left {
+  left: 35px;
+}
+.eye.right {
+  right: 35px;
+}
+.mouth {
+  position: absolute;
+  left: 64px;
+  top: 88px;
+  width: 21px;
+  height: 10px;
+  border-bottom: 3px solid #31264d;
+  border-radius: 0 0 50% 50%;
+}
+.pet-shadow {
+  position: absolute;
+  left: 40px;
+  bottom: 4px;
+  width: 132px;
+  height: 21px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.35);
+  filter: blur(5px);
+}
+.bubble {
+  position: absolute;
+  z-index: 5;
+  top: 16px;
+  left: 50%;
+  width: min(88%, 360px);
+  max-height: 105px;
+  overflow: auto;
+  transform: translateX(-50%);
+  padding: 12px 14px;
+  border-radius: 18px 18px 18px 5px;
+  color: #28223b;
+  background: rgba(255, 255, 255, 0.96);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.state-label {
+  position: absolute;
+  bottom: 12px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  color: var(--muted);
+  background: rgba(10, 8, 18, 0.72);
+  font-size: 11px;
+}
+.state-idle .custom-pet {
+  animation: breathe 3s ease-in-out infinite;
+}
+.state-listening .custom-pet {
+  animation: listen 0.7s ease-in-out infinite alternate;
+}
+.state-thinking .custom-pet {
+  animation: think 1.3s ease-in-out infinite;
+}
+.state-speaking .custom-pet {
+  animation: talk 0.28s ease-in-out infinite alternate;
+}
+.state-speaking .mouth {
+  height: 17px;
+  border: 0;
+  border-radius: 45%;
+  background: #3a244a;
+  animation: mouth 0.22s infinite alternate;
+}
+.state-wave .custom-pet {
+  animation: wave 0.45s ease-in-out 5;
+}
+.state-happy .custom-pet {
+  animation: happy 0.5s ease-in-out 4 alternate;
+}
+.state-dance .custom-pet {
+  animation: dance 0.55s ease-in-out 7;
+}
+.state-sleep .custom-pet {
+  animation: sleep 4s ease-in-out infinite;
+}
+.quick-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 9px;
+}
+.quick-actions button {
+  padding: 11px;
+}
+.chat-card {
+  min-height: 250px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: var(--panel);
+  overflow: hidden;
+}
+.messages {
+  min-height: 180px;
+  max-height: 34dvh;
+  overflow: auto;
+  padding: 14px;
+}
+.message {
+  width: fit-content;
+  max-width: 86%;
+  margin: 0 0 9px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+.pet-message {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 14px 14px 14px 4px;
+}
+.user-message {
+  margin-left: auto;
+  background: linear-gradient(135deg, #725be5, #5942c4);
+  border-radius: 14px 14px 4px 14px;
+}
+.composer {
+  display: flex;
+  gap: 9px;
+  padding: 11px;
+  border-top: 1px solid var(--line);
+}
+textarea,
+input,
+select {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 11px;
+  color: var(--ink);
+  background: rgba(7, 6, 14, 0.55);
+  outline: none;
+}
+.composer textarea {
+  resize: none;
+}
+.composer button,
+.primary {
+  border: 0;
+  border-radius: 12px;
+  padding: 0 17px;
+  color: white;
+  background: linear-gradient(135deg, var(--violet), #5c46d8);
+}
+dialog {
+  width: min(calc(100% - 24px), 560px);
+  max-height: 90dvh;
+  padding: 0;
+  border: 0;
+  border-radius: 24px;
+  color: var(--ink);
+  background: transparent;
+}
+dialog::backdrop {
+  background: rgba(3, 2, 8, 0.68);
+  backdrop-filter: blur(7px);
+}
+.settings-card {
+  max-height: 90dvh;
+  overflow: auto;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: #1b172d;
+}
+.settings-card header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.settings-card h2 {
+  margin: 0;
+}
+.settings-card label {
+  display: block;
+  margin: 14px 0 6px;
+  color: #d9d5e8;
+  font-size: 12px;
+}
+.primary,
+.secondary {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 12px;
+}
+.hint,
+.status {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+@keyframes blink {
+  0%,
+  45%,
+  49%,
+  100% {
+    transform: scaleY(1);
+  }
+  47% {
+    transform: scaleY(0.08);
+  }
+}
+@keyframes breathe {
+  50% {
+    transform: translateY(-7px) scale(1.015);
+  }
+}
+@keyframes listen {
+  to {
+    transform: rotate(4deg) translateY(-7px);
+  }
+}
+@keyframes think {
+  50% {
+    transform: rotate(5deg) translateY(-5px);
+  }
+}
+@keyframes talk {
+  to {
+    transform: translateY(-5px) scaleY(1.03);
+  }
+}
+@keyframes mouth {
+  to {
+    height: 7px;
+    transform: translateY(5px);
+  }
+}
+@keyframes wave {
+  25% {
+    transform: rotate(-8deg);
+  }
+  75% {
+    transform: rotate(8deg) translateY(-6px);
+  }
+}
+@keyframes happy {
+  to {
+    transform: translateY(-25px) rotate(4deg);
+  }
+}
+@keyframes dance {
+  25% {
+    transform: translateX(-22px) rotate(-11deg);
+  }
+  75% {
+    transform: translateX(22px) rotate(11deg);
+  }
+}
+@keyframes sleep {
+  50% {
+    transform: translateY(10px) rotate(-3deg) scale(1.02);
+  }
+}
+@media (min-width: 700px) {
+  .app-shell {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto 1fr auto;
+  }
+  .topbar {
+    grid-column: 1/-1;
+  }
+  .pet-stage {
+    grid-row: 2/4;
+  }
+  .chat-card {
+    min-height: 420px;
+  }
+  .quick-actions {
+    grid-column: 2;
+  }
+}

@@ -120,7 +120,7 @@ function registerIpc() {
     return avatarUrl;
   });
   ipcMain.handle("window:set-compact", (_event, compact) => {
-    mainWindow.setSize(compact ? 320 : 440, compact ? 420 : 720, true);
+    mainWindow.setSize(compact ? 300 : 440, compact ? 360 : 720, true);
     return true;
   });
   ipcMain.handle("window:hide", () => { mainWindow.hide(); return true; });

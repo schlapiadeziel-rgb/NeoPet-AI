@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#151126" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <meta name="apple-mobile-web-app-title" content="NeoPet AI" />
+    <title>NeoPet AI Mobile</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">NEOPET AI</p>
+          <h1 id="petName">小诺</h1>
+        </div>
+        <div class="top-actions">
+          <button id="installButton" class="ghost hidden">安装</button
+          ><button id="settingsButton" class="icon" aria-label="设置">⚙</button>
+        </div>
+      </header>
+
+      <section
+        id="petStage"
+        class="pet-stage state-idle"
+        data-emotion="neutral"
+      >
+        <div id="speechBubble" class="bubble hidden"></div>
+        <div
+          id="defaultPet"
+          class="pet sprite-pet"
+          role="button"
+          tabindex="0"
+          aria-label="触摸桌面宠物小诺"
+        ></div>
+        <img id="customPet" class="custom-pet hidden" alt="自定义宠物" />
+        <span id="stateLabel" class="state-label">空闲</span>
+      </section>
+
+      <section class="quick-actions" aria-label="快捷操作">
+        <button id="touchButton">摸摸</button
+        ><button id="waveButton">挥手</button
+        ><button id="micButton">说话</button>
+      </section>
+
+      <section class="chat-card">
+        <div id="messages" class="messages" aria-live="polite">
+          <div class="message pet-message">
+            你好，我会听、会说，也会根据回答做动作。
+          </div>
+        </div>
+        <form id="chatForm" class="composer">
+          <textarea
+            id="messageInput"
+            rows="1"
+            placeholder="和桌宠说点什么……"
+          ></textarea
+          ><button type="submit">发送</button>
+        </form>
+      </section>
+    </main>
+
+    <dialog id="settingsDialog">
+      <form method="dialog" class="settings-card">
+        <header>
+          <div>
+            <p class="eyebrow">CONTROL CENTER</p>
+            <h2>宠物设置</h2>
+          </div>
+          <button class="icon" value="cancel" aria-label="关闭">×</button>
+        </header>
+        <label>名字<input id="nameInput" maxlength="30" /></label>
+        <label>性格<textarea id="personalityInput" rows="3"></textarea></label>
+        <label
+          >OpenAI 兼容 API 地址<input
+            id="baseUrlInput"
+            inputmode="url"
+            placeholder="https://api.openai.com/v1"
+        /></label>
+        <label
+          >聊天模型<input
+            id="modelInput"
+            list="modelSuggestions"
+            placeholder="自由填写模型名称"
+        /></label>
+        <datalist id="modelSuggestions">
+          <option value="gpt-4.1-mini"></option>
+          <option value="qwen2.5:3b"></option>
+          <option value="gemma3:4b"></option>
+          <option value="llama3.2:3b"></option>
+        </datalist>
+        <label
+          >API 密钥（仅保留到本次浏览器会话）<input
+            id="apiKeyInput"
+            type="password"
+            autocomplete="off"
+        /></label>
+        <label
+          >回复语言<select id="languageInput">
+            <option value="auto">自动识别</option>
+            <option value="zh-CN">中文</option>
+            <option value="en-US">English</option>
+            <option value="ja-JP">日本語</option>
+            <option value="ko-KR">한국어</option>
+          </select></label
+        >
+        <label
+          >导入原创宠物图片<input
+            id="avatarInput"
+            type="file"
+            accept="image/png,image/webp,image/jpeg"
+        /></label>
+        <p class="hint">
+          电影和动画只能作为风格灵感，请使用原创或已获授权的角色素材。
+        </p>
+        <button id="saveSettingsButton" class="primary" value="cancel">
+          保存
+        </button>
+        <button id="restorePetButton" class="secondary" value="cancel">
+          恢复默认宠物
+        </button>
+        <p id="settingsStatus" class="status"></p>
+      </form>
+    </dialog>
+    <script src="app.js"></script>
+  </body>
+</html>

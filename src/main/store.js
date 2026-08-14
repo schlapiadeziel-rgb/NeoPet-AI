@@ -15,6 +15,7 @@ const DEFAULTS = {
     personality: "温暖、活泼、简洁，使用用户正在使用的语言回答。",
     avatarUrl: "",
     voiceName: "",
+    language: "auto",
     speechRate: 1
   },
   memory: []
@@ -77,6 +78,7 @@ class ConfigStore {
       ...(typeof pet.personality === "string" ? { personality: pet.personality.trim().slice(0, 1000) } : {}),
       ...(typeof pet.avatarUrl === "string" ? { avatarUrl: pet.avatarUrl } : {}),
       ...(typeof pet.voiceName === "string" ? { voiceName: pet.voiceName } : {}),
+      ...(typeof pet.language === "string" ? { language: pet.language } : {}),
       ...(Number.isFinite(Number(pet.speechRate)) ? { speechRate: Math.min(1.5, Math.max(0.7, Number(pet.speechRate))) } : {})
     };
     this.persist();

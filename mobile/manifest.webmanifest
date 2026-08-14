@@ -1,0 +1,11 @@
+{
+  "name": "NeoPet AI Mobile",
+  "short_name": "NeoPet AI",
+  "description": "可自定义模型、语音和角色的跨平台 AI 宠物",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#151126",
+  "theme_color": "#151126",
+  "icons": [{"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}
