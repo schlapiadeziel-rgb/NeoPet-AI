@@ -43,6 +43,17 @@
       <p id="petStateLabel" class="pet-state-label">空闲</p>
     </section>
 
+    <section class="quick-actions" aria-label="快捷操作">
+      <button id="touchButton" class="quick-action" type="button"><span aria-hidden="true">♡</span>摸摸</button>
+      <button id="waveButton" class="quick-action" type="button"><span aria-hidden="true">◌</span>挥手</button>
+      <button id="quickMicButton" class="quick-action" type="button"><span aria-hidden="true">◉</span>说话</button>
+    </section>
+
+    <section class="compact-controls" aria-label="桌宠控制">
+      <button id="compactMicButton" class="compact-control" type="button" title="和小诺说话" aria-label="和小诺说话">◉</button>
+      <button id="compactChatButton" class="compact-control" type="button" title="展开聊天" aria-label="展开聊天">⌃</button>
+    </section>
+
     <section id="chatPanel" class="glass chat-panel hidden">
       <div id="messages" class="messages" aria-live="polite">
         <div class="message pet-message">你好，我会听、会说，也会根据回答做动作。</div>
@@ -66,7 +77,8 @@
         <section class="setting-group">
           <h3>AI 接口</h3>
           <label>OpenAI 兼容 API 地址</label><input id="baseUrlInput" placeholder="https://api.openai.com/v1">
-          <label>聊天模型</label><input id="modelInput" placeholder="填写服务商提供的模型名称">
+          <label>聊天模型</label><input id="modelInput" list="modelSuggestions" placeholder="自由填写服务商提供的模型名称">
+          <datalist id="modelSuggestions"><option value="gpt-4.1-mini"></option><option value="qwen2.5:3b"></option><option value="gemma3:4b"></option><option value="llama3.2:3b"></option></datalist>
           <label>图像模型</label><input id="imageModelInput" placeholder="用于生成桌宠，可暂时留空">
           <label>API 密钥</label><input id="apiKeyInput" type="password" placeholder="已加密保存在系统安全存储">
           <p id="apiKeyHint" class="hint"></p>

@@ -54,6 +54,8 @@ select {
   margin: 0;
   font-size: 24px;
 }
+.pet-heading { display: flex; align-items: center; gap: 9px; }
+.online-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 13px var(--cyan); }
 .eyebrow {
   margin: 0 0 3px;
   color: var(--cyan);
@@ -89,7 +91,7 @@ select {
   place-items: end center;
   overflow: hidden;
   border: 1px solid var(--line);
-  border-radius: 32px;
+  border-radius: 24px;
   background: linear-gradient(
     180deg,
     rgba(255, 255, 255, 0.04),
@@ -253,7 +255,17 @@ select {
   gap: 9px;
 }
 .quick-actions button {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
   padding: 11px;
+  color: #e8e5f3;
+}
+.quick-actions button span {
+  color: var(--cyan);
+  font-size: 17px;
 }
 .chat-card {
   min-height: 250px;

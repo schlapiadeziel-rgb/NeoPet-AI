@@ -49,10 +49,12 @@ button { border: 0; cursor: pointer; }
 .compact-mode .titlebar { position: absolute; z-index: 25; top: 8px; left: 8px; right: 8px; opacity: 0; transform: translateY(-6px); transition: opacity .2s, transform .2s; }
 .compact-mode:hover .titlebar, .compact-mode .titlebar:focus-within { opacity: 1; transform: translateY(0); }
 .compact-mode .pet-stage { flex: 1 1 auto; width: 100%; }
-.compact-mode .pet-art, .compact-mode .custom-pet { width: 190px; height: 235px; }
-.compact-mode .sprite-pet { width: 190px; height: 206px; }
-.compact-mode .pet-state-label { bottom: 12px; }
+.compact-mode .pet-art, .compact-mode .custom-pet { width: 210px; height: 260px; margin-bottom: 58px; }
+.compact-mode .sprite-pet { width: 210px; height: 228px; }
+.compact-mode .pet-state-label { display: none; }
 .compact-mode .speech-bubble { top: 48px; }
+.compact-mode .quick-actions { display: none; }
+.compact-mode .compact-controls { display: flex; }
 .titlebar { z-index: 20; height: 45px; flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; border-radius: 15px; overflow: hidden; }
 .drag-region { -webkit-app-region: drag; flex: 1; height: 100%; display: flex; align-items: center; gap: 8px; padding: 0 14px; font-size: 12px; }
 .online-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 12px var(--cyan); }
@@ -60,9 +62,10 @@ button { border: 0; cursor: pointer; }
 .icon-button { width: 33px; height: 33px; border-radius: 10px; color: #c9c6d6; background: transparent; }
 .icon-button:hover { background: rgba(255,255,255,.08); color: white; }
 
-.pet-stage { position: relative; flex: 0 0 300px; display: grid; place-items: end center; user-select: none; }
-.pet-art, .custom-pet { position: relative; width: 180px; height: 220px; cursor: grab; transform-origin: 50% 90%; filter: drop-shadow(0 18px 25px rgba(0,0,0,.28)); }
-.sprite-pet { width: 190px; height: 206px; background: url("assets/pets/xiaonuo/spritesheet.webp") 0 0 / 800% 1100% no-repeat; image-rendering: pixelated; will-change: background-position; }
+.pet-stage { position: relative; flex: 0 0 300px; display: grid; place-items: end center; user-select: none; overflow: hidden; border: 1px solid var(--line); border-radius: 24px; background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.015)); }
+.compact-mode .pet-stage { border: 0; border-radius: 0; background: transparent; }
+.pet-art, .custom-pet { position: relative; width: 210px; height: 260px; cursor: grab; transform-origin: 50% 90%; filter: drop-shadow(0 18px 25px rgba(0,0,0,.28)); }
+.sprite-pet { width: 210px; height: 228px; background: url("assets/pets/xiaonuo/spritesheet.webp") 0 0 / 800% 1100% no-repeat; image-rendering: pixelated; will-change: background-position; }
 .custom-pet { object-fit: contain; }
 .pet-art:active, .custom-pet:active { cursor: grabbing; }
 .body { position: absolute; left: 44px; bottom: 19px; width: 94px; height: 110px; border-radius: 47% 47% 38% 38%; background: linear-gradient(145deg, #9784ff, #604bd2); z-index: 2; }
@@ -81,6 +84,14 @@ button { border: 0; cursor: pointer; }
 .shadow { position: absolute; left: 29px; bottom: 4px; width: 125px; height: 20px; border-radius: 50%; background: rgba(8,6,17,.35); filter: blur(5px); z-index: 0; }
 .speech-bubble { position: absolute; z-index: 12; top: 4px; left: 50%; width: min(310px, 86%); max-height: 105px; overflow: auto; transform: translateX(-50%); padding: 12px 14px; border: 1px solid var(--line); border-radius: 16px 16px 16px 5px; color: #29243d; background: rgba(255,255,255,.95); box-shadow: 0 10px 30px rgba(0,0,0,.2); font-size: 12px; line-height: 1.5; }
 .pet-state-label { position: absolute; bottom: -1px; left: 50%; transform: translateX(-50%); margin: 0; padding: 4px 10px; border-radius: 99px; color: var(--muted); background: rgba(17,14,28,.72); font-size: 10px; }
+
+.quick-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; flex: 0 0 auto; }
+.quick-action { min-height: 42px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: 1px solid var(--line); border-radius: 13px; color: #e8e5f3; background: rgba(255,255,255,.06); font-size: 12px; }
+.quick-action:hover { border-color: rgba(128,103,255,.7); background: rgba(128,103,255,.14); }
+.quick-action span { color: var(--cyan); font-size: 16px; }
+.compact-controls { position: absolute; z-index: 18; left: 50%; bottom: 13px; display: none; gap: 12px; transform: translateX(-50%); }
+.compact-control { width: 42px; height: 42px; border: 1px solid rgba(255,255,255,.19); border-radius: 50%; color: white; background: rgba(19,17,27,.82); box-shadow: 0 10px 24px rgba(0,0,0,.26); backdrop-filter: blur(14px); font-size: 19px; }
+.compact-control:hover { border-color: var(--cyan); background: rgba(47,42,67,.92); }
 
 .state-idle .custom-pet { animation: breathe 3.2s ease-in-out infinite; }
 .state-listening .custom-pet { animation: listen .75s ease-in-out infinite alternate; }

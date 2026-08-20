@@ -12,15 +12,17 @@ let store;
 let otp;
 let quitting = false;
 let clickThrough = false;
+const qaCapturePath = process.env.NEOPET_QA_CAPTURE || "";
+const qaCaptureExpanded = process.env.NEOPET_QA_EXPANDED === "1";
 
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 440,
     height: 720,
-    minWidth: 300,
-    minHeight: 360,
-    transparent: true,
-    backgroundColor: "#00000000",
+    minWidth: 320,
+    minHeight: 390,
+    transparent: !qaCapturePath,
+    backgroundColor: qaCapturePath ? "#090711" : "#00000000",
     frame: false,
     resizable: true,
     alwaysOnTop: true,
@@ -36,7 +38,19 @@ function createWindow() {
   mainWindow.setAlwaysOnTop(true, "floating");
   mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   mainWindow.loadFile(path.join(__dirname, "../renderer/index.html"));
-  mainWindow.once("ready-to-show", () => mainWindow.show());
+  mainWindow.once("ready-to-show", () => {
+    mainWindow.show();
+    if (qaCapturePath) {
+      if (qaCaptureExpanded) mainWindow.webContents.send("window:open-chat");
+      setTimeout(async () => {
+        const image = await mainWindow.webContents.capturePage();
+        fs.mkdirSync(path.dirname(qaCapturePath), { recursive: true });
+        fs.writeFileSync(qaCapturePath, image.toPNG());
+        quitting = true;
+        app.quit();
+      }, 1400);
+    }
+  });
   mainWindow.on("close", (event) => {
     if (!quitting) {
       event.preventDefault();
@@ -120,7 +134,7 @@ function registerIpc() {
     return avatarUrl;
   });
   ipcMain.handle("window:set-compact", (_event, compact) => {
-    mainWindow.setSize(compact ? 300 : 440, compact ? 360 : 720, true);
+    mainWindow.setSize(compact ? 320 : 440, compact ? 390 : 720, true);
     return true;
   });
   ipcMain.handle("window:hide", () => { mainWindow.hide(); return true; });

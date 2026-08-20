@@ -5,6 +5,7 @@ const elements = {
   sendCode: $("#sendCodeButton"), verifyCode: $("#verifyCodeButton"), authStatus: $("#authStatus"), petStage: $("#petStage"),
   defaultPet: $("#defaultPet"), customPet: $("#customPet"), speechBubble: $("#speechBubble"), petStateLabel: $("#petStateLabel"),
   messages: $("#messages"), chatForm: $("#chatForm"), messageInput: $("#messageInput"), mic: $("#micButton"), chatPanel: $("#chatPanel"),
+  touch: $("#touchButton"), wave: $("#waveButton"), quickMic: $("#quickMicButton"), compactMic: $("#compactMicButton"), compactChat: $("#compactChatButton"),
   compact: $("#compactButton"), settings: $("#settingsButton"), hide: $("#hideButton"), settingsPanel: $("#settingsPanel"),
   closeSettings: $("#closeSettingsButton"), petTitle: $("#petTitle"), petName: $("#petNameInput"), personality: $("#personalityInput"),
   baseUrl: $("#baseUrlInput"), model: $("#modelInput"), imageModel: $("#imageModelInput"), apiKey: $("#apiKeyInput"),
@@ -40,7 +41,8 @@ const spriteStates = {
 
 const stateLabels = {
   idle: "空闲", listening: "正在听", thinking: "正在思考", speaking: "正在回答", happy: "开心",
-  wave: "向你挥手", nod: "点头", dance: "跳舞", sleep: "睡觉"
+  wave: "向你挥手", nod: "点头", dance: "跳舞", sleep: "睡觉", failed: "需要帮助",
+  "running-left": "跟着你", "running-right": "跟着你"
 };
 
 function setStatus(element, text, error = false) {
@@ -304,7 +306,16 @@ elements.chatForm.addEventListener("submit", (event) => { event.preventDefault()
 elements.messageInput.addEventListener("keydown", (event) => {
   if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); sendMessage(elements.messageInput.value); }
 });
-elements.mic.addEventListener("click", () => recognition ? recognition.start() : showBubble("请使用文字输入，或在后续版本配置本地语音识别。", 4500));
+function startListening() {
+  if (recognition) recognition.start();
+  else {
+    setPetMode(false, true);
+    showBubble("当前系统不支持语音识别，请直接输入文字。", 4500);
+  }
+}
+elements.mic.addEventListener("click", startListening);
+elements.quickMic.addEventListener("click", startListening);
+elements.compactMic.addEventListener("click", startListening);
 
 function touchPet() {
   speechSynthesis.cancel();
@@ -313,6 +324,16 @@ function touchPet() {
   setTimeout(() => applyPetState("idle", "happy"), 2200);
   scheduleIdle();
 }
+function waveToUser() {
+  speechSynthesis.cancel();
+  applyPetState("wave", "happy");
+  showBubble("我在这里！", 1900);
+  setTimeout(() => applyPetState("idle", "happy"), 2100);
+  scheduleIdle();
+}
+elements.touch.addEventListener("click", touchPet);
+elements.wave.addEventListener("click", waveToUser);
+elements.compactChat.addEventListener("click", () => setPetMode(false, true));
 function enablePetDrag(element) {
   element.addEventListener("pointerdown", async (event) => {
     if (event.button !== 0) return;

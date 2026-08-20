@@ -4,6 +4,16 @@ NeoPet AI 是一个跨电脑与移动设备的 AI 宠物。电脑端提供透明
 
 ![小诺 v2 动作图集质检图](docs/xiaonuo-contact-sheet.png)
 
+## 0.1.2 跨端统一
+
+电脑版和移动版现在使用同一套角色比例、动作状态、快捷操作和视觉语言。电脑端保留适合工作的透明悬浮模式，展开后与移动端使用相同的宠物舞台、`摸摸 / 挥手 / 说话`入口和聊天卡片；平台差异只保留在窗口形态，不再把两端做成两个不同产品。
+
+| Windows 悬浮模式 | Windows 展开模式 | 移动端 |
+| --- | --- | --- |
+| ![Windows 悬浮模式](docs/desktop-compact-qa.png) | ![Windows 展开模式](docs/desktop-expanded-qa.png) | ![移动端](docs/mobile-unified-qa.png) |
+
+设计参考与取舍见 [产品参考研究](docs/DESIGN_REFERENCES.md)。
+
 ## 移动端
 
 移动端源码在 `mobile/`，可安装到 Android、iPhone、iPad 和支持 PWA 的桌面浏览器。
@@ -50,7 +60,7 @@ npm test
 npm start
 ```
 
-开发环境未配置 SMTP 时，验证码会显示在登录页，仅用于本地测试。正式安装包不会显示开发验证码。
+开发环境默认直接显示测试验证码，不会连接真实 SMTP；需要在开发环境实际发送邮件时额外设置 `NEOPET_DEV_SEND_EMAIL=1`。正式安装包仍按 SMTP 配置发送邮件，不会显示开发验证码。
 
 ## 邮箱验证码
 
