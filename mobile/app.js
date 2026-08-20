@@ -14,6 +14,7 @@ const ui = {
   settings: $("#settingsButton"),
   dialog: $("#settingsDialog"),
   install: $("#installButton"),
+  overlay: $("#overlayButton"),
   name: $("#petName"),
   nameInput: $("#nameInput"),
   personality: $("#personalityInput"),
@@ -46,6 +47,27 @@ let installPrompt;
 let spriteTimer;
 let lookResetTimer;
 let currentPetState = "idle";
+
+function renderOverlayState(state = {}) {
+  if (!ui.overlay || !state.available) return;
+  ui.overlay.classList.remove("hidden");
+  ui.overlay.textContent = state.running ? "关闭悬浮" : state.granted ? "开启悬浮" : "悬浮授权";
+  ui.overlay.dataset.running = state.running ? "true" : "false";
+}
+
+function setupAndroidOverlay() {
+  const bridge = window.NeoPetAndroid;
+  if (!bridge) return;
+  try {
+    renderOverlayState({
+      available: bridge.isOverlayAvailable(),
+      granted: bridge.isOverlayGranted(),
+      running: bridge.isOverlayRunning(),
+    });
+  } catch {
+    ui.overlay.classList.add("hidden");
+  }
+}
 
 const spriteStates = {
   idle: { row: 0, frames: 6, interval: 480 },
@@ -289,6 +311,27 @@ ui.stage.addEventListener("pointermove", (event) => {
   lookResetTimer = setTimeout(() => animateSprite("idle"), 850);
 });
 ui.settings.addEventListener("click", () => ui.dialog.showModal());
+ui.overlay.addEventListener("click", () => {
+  const bridge = window.NeoPetAndroid;
+  if (!bridge) return;
+  try {
+    if (bridge.isOverlayRunning()) {
+      bridge.disableOverlay();
+      renderOverlayState({ available: true, granted: bridge.isOverlayGranted(), running: false });
+      showBubble("悬浮桌宠已关闭。", 1800);
+      return;
+    }
+    if (!bridge.isOverlayGranted()) {
+      const accepted = window.confirm("开启悬浮桌宠后，小诺会显示在其他应用上方，并通过常驻通知让你随时关闭。是否前往系统设置授权？");
+      if (!accepted) return;
+    }
+    ui.overlay.textContent = "正在设置…";
+    bridge.enableOverlay();
+  } catch {
+    showBubble("无法开启悬浮桌宠，请在系统设置中检查权限。", 3500);
+  }
+});
+window.addEventListener("neopet-overlay-state", (event) => renderOverlayState(event.detail));
 ui.avatar.addEventListener("change", () => {
   const file = ui.avatar.files?.[0];
   if (!file) return;
@@ -339,6 +382,7 @@ ui.install.addEventListener("click", async () => {
 });
 applyConfig();
 setupRecognition();
+setupAndroidOverlay();
 setState("idle");
 scheduleIdle();
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol))

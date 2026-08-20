@@ -26,6 +26,18 @@ npm run mobile:serve
 
 Android 工程位于 `android/`，打包时直接复用 `mobile/` 的页面资源。调试 APK 可通过 Android Studio 构建，或使用仓库内 Gradle Wrapper 执行 `android\\gradlew.bat -p android assembleDebug`。
 
+### Android 悬浮桌宠与权限
+
+Android APK 会在顶部显示“悬浮授权 / 开启悬浮 / 关闭悬浮”按钮，PWA 和 iPhone 不显示该按钮。权限遵循按需申请：
+
+- `INTERNET`：连接云端 API 或局域网本地模型，安装时自动授予。
+- `RECORD_AUDIO`：只有用户主动使用语音输入时才申请；拒绝后仍可文字聊天。
+- `SYSTEM_ALERT_WINDOW`：只有用户主动开启悬浮桌宠时才跳转系统设置授权。
+- `POST_NOTIFICATIONS`：开启悬浮桌宠时申请，用于显示可见的常驻控制通知；拒绝后 Android 仍会在系统任务管理界面显示前台服务状态。
+- `FOREGROUND_SERVICE` 与 `FOREGROUND_SERVICE_SPECIAL_USE`：用于维持用户主动开启的互动桌宠，服务用途已在清单中声明。
+
+悬浮小诺支持拖动、点击动作反馈、语音入口和返回完整聊天；通知中始终提供“关闭桌宠”。选择宠物图片继续使用系统文件选择器，不申请读取全部存储空间。当前没有完成视频通话，因此不会提前申请摄像头权限。
+
 ## 桌面宠物交互
 
 - 登录成功后默认进入透明宠物模式，不持续占用大聊天窗口。
