@@ -131,6 +131,18 @@ button { border: 0; cursor: pointer; }
 .pet-choice-preview.pixelated { image-rendering: pixelated; }
 .pet-choice strong, .pet-choice small { display: block; overflow: hidden; text-overflow: ellipsis; }
 .pet-choice strong { font-size: 12px; }.pet-choice small { margin-top: 2px; color: var(--muted); font-size: 9px; white-space: nowrap; }
+.setting-group h4 { margin: 14px 0 7px; color: #d8d5e5; font-size: 11px; }
+.bond-card { padding: 12px; border: 1px solid rgba(128,103,255,.34); border-radius: 14px; background: linear-gradient(135deg, rgba(128,103,255,.16), rgba(67,215,224,.07)); }
+.bond-card > div:first-child { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.bond-card strong { color: #fff; font-size: 15px; }.bond-card span { color: var(--muted); font-size: 10px; }
+.bond-track { height: 5px; margin-top: 10px; overflow: hidden; border-radius: 99px; background: rgba(255,255,255,.08); }
+.bond-track i { display: block; width: 0; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--violet-bright), var(--cyan)); transition: width .35s ease; }
+.toggle-row { display: flex; align-items: center; gap: 8px; }.toggle-row input { width: auto; margin: 0; accent-color: var(--violet); }
+.memory-list { display: grid; gap: 6px; max-height: 152px; overflow: auto; }
+.memory-row, .diary-row { padding: 8px 9px; border: 1px solid var(--line); border-radius: 10px; color: #d8d5e5; background: rgba(255,255,255,.035); font-size: 10px; line-height: 1.45; }
+.memory-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }.memory-row span { min-width: 0; overflow-wrap: anywhere; }
+.memory-row button { flex: 0 0 auto; padding: 4px 7px; border-radius: 7px; color: #ff9baa; background: rgba(255,155,170,.1); font-size: 9px; }
+.full-button { width: 100%; margin-top: 8px; }
 
 @keyframes blink { 0%, 45%, 49%, 100% { transform: scaleY(1); } 47% { transform: scaleY(.08); } }
 @keyframes breathe { 0%,100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-5px) scale(1.015); } }

@@ -11,6 +11,8 @@ const elements = {
   baseUrl: $("#baseUrlInput"), model: $("#modelInput"), imageModel: $("#imageModelInput"), apiKey: $("#apiKeyInput"),
   apiKeyHint: $("#apiKeyHint"), petPrompt: $("#petPromptInput"), generatePet: $("#generatePetButton"), importAvatar: $("#importAvatarButton"),
   restoreAvatar: $("#restoreAvatarButton"), modelUrl: $("#modelUrlInput"), modelFile: $("#modelFileInput"), language: $("#languageSelect"), voice: $("#voiceSelect"), speechRate: $("#speechRateInput"), speechRateValue: $("#speechRateValue"),
+  relationshipStage: $("#relationshipStage"), relationshipStats: $("#relationshipStats"), bondProgress: $("#bondProgress"), proactiveEnabled: $("#proactiveEnabled"),
+  memoryFacts: $("#memoryFacts"), companionDiary: $("#companionDiary"), exportMemory: $("#exportMemoryButton"), importMemory: $("#importMemoryButton"), clearCompanion: $("#clearCompanionButton"),
   saveSettings: $("#saveSettingsButton"), mediaCenter: $("#mediaCenterButton"), clearMemory: $("#clearMemoryButton"), logout: $("#logoutButton"), settingsStatus: $("#settingsStatus")
 };
 
@@ -201,6 +203,34 @@ function appendMessage(role, content) {
   elements.messages.scrollTop = elements.messages.scrollHeight;
 }
 
+function renderCompanion() {
+  const companion = appState?.companion || {};
+  elements.relationshipStage.textContent = companion.stage || "初识";
+  elements.relationshipStats.textContent = `信任 ${companion.trust || 0} · 连续 ${companion.streakDays || 0} 天 · ${companion.mood || "平静"}`;
+  elements.bondProgress.style.width = `${Math.min(100, Number(companion.xp || 0) % 100)}%`;
+  elements.proactiveEnabled.checked = companion.proactiveEnabled !== false;
+  const facts = Array.isArray(companion.facts) ? companion.facts : [];
+  elements.memoryFacts.replaceChildren(...(facts.length ? facts.slice().reverse().map((fact) => {
+    const row = document.createElement("div");
+    row.className = "memory-row";
+    const text = document.createElement("span");
+    text.textContent = fact.text;
+    const forget = document.createElement("button");
+    forget.type = "button";
+    forget.textContent = "忘记";
+    forget.addEventListener("click", async () => { appState = await window.neopet.companion.forgetFact(fact.id); renderCompanion(); });
+    row.append(text, forget);
+    return row;
+  }) : [Object.assign(document.createElement("p"), { className: "hint", textContent: "还没有长期记忆" })]));
+  const diary = Array.isArray(companion.diary) ? companion.diary : [];
+  elements.companionDiary.replaceChildren(...(diary.length ? diary.slice(-5).reverse().map((entry) => {
+    const row = document.createElement("div");
+    row.className = "diary-row";
+    row.textContent = `${new Date(entry.at).toLocaleDateString()} · ${entry.text}`;
+    return row;
+  }) : [Object.assign(document.createElement("p"), { className: "hint", textContent: "日记会随着相处逐渐出现" })]));
+}
+
 function populateSettings() {
   elements.petName.value = appState.pet.name;
   elements.personality.value = appState.pet.personality;
@@ -217,6 +247,7 @@ function populateSettings() {
   applyBuiltInPet(appState.pet.petId);
   applyVisualMode(localModelObjectUrl);
   renderPetPicker();
+  renderCompanion();
 }
 
 async function saveSettings() {
@@ -278,6 +309,8 @@ async function sendMessage(text) {
     conversation.push({ role: "assistant", content: response.reply });
     appendMessage("assistant", response.reply);
     speak(response.reply, response.action, response.emotion);
+    appState = await window.neopet.state.get();
+    renderCompanion();
   } catch (error) {
     appendMessage("assistant", `连接失败：${error.message}`);
     showBubble(error.message, 5000);
@@ -330,7 +363,14 @@ async function initialize() {
   setupSpeechRecognition();
   applyPetState("idle", "neutral");
   scheduleIdle();
-  if (authenticated) await setPetMode(true);
+  if (authenticated) {
+    await setPetMode(true);
+    const last = Date.parse(appState.companion?.lastInteractionAt || "") || 0;
+    if (appState.companion?.proactiveEnabled !== false && Date.now() - last > 6 * 60 * 60 * 1000) {
+      const greeting = await window.neopet.companion.greeting();
+      if (greeting) showBubble(greeting, 7000);
+    }
+  }
 }
 
 elements.sendCode.addEventListener("click", async () => {
@@ -449,6 +489,17 @@ window.neopet.onOpenChat(() => setPetMode(false, true));
 
 elements.speechRate.addEventListener("input", () => { elements.speechRateValue.textContent = Number(elements.speechRate.value).toFixed(1); });
 elements.saveSettings.addEventListener("click", saveSettings);
+elements.proactiveEnabled.addEventListener("change", async () => { appState = await window.neopet.companion.setProactive(elements.proactiveEnabled.checked); renderCompanion(); });
+elements.exportMemory.addEventListener("click", async () => { const result = await window.neopet.companion.exportData(); setStatus(elements.settingsStatus, result?.canceled ? "已取消备份" : "陪伴数据已备份"); });
+elements.importMemory.addEventListener("click", async () => { const result = await window.neopet.companion.importData(); if (result?.state) { appState = result.state; populateSettings(); setStatus(elements.settingsStatus, "备份已导入"); } });
+elements.clearCompanion.addEventListener("click", async () => {
+  if (!confirm("这会删除对话、长期记忆、关系等级和陪伴日记，确定继续吗？")) return;
+  appState = await window.neopet.companion.clear();
+  conversation = [];
+  elements.messages.replaceChildren();
+  renderCompanion();
+  setStatus(elements.settingsStatus, "陪伴数据已清除");
+});
 elements.mediaCenter.addEventListener("click", () => window.neopet.window.openMedia());
 elements.importAvatar.addEventListener("click", async () => {
   const avatar = await window.neopet.pet.importAvatar();

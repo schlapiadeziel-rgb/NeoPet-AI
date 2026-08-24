@@ -5,6 +5,7 @@ const { app, BrowserWindow, dialog, globalShortcut, ipcMain, Menu, nativeImage, 
 const { ConfigStore } = require("./store");
 const { OtpService } = require("./auth");
 const ai = require("./ai");
+const { proactiveGreeting } = require("../shared/companion");
 
 let mainWindow;
 let mediaWindow;
@@ -116,11 +117,13 @@ function registerIpc() {
       config: store.data.ai,
       apiKey: store.apiKey(),
       pet: store.data.pet,
+      companion: store.data.companion,
       messages: Array.isArray(messages) ? messages : []
     });
     const latest = messages?.at(-1);
     if (latest?.role === "user") store.addMemory("user", latest.content);
     store.addMemory("assistant", value.reply);
+    store.recordInteraction({ userText: latest?.content || "", reply: value.reply, emotion: value.emotion });
     return value;
   });
   ipcMain.handle("ai:generate-pet", async (_event, prompt) => {
@@ -148,6 +151,21 @@ function registerIpc() {
     const avatarUrl = pathToFileURL(destination).href;
     store.setAvatar(avatarUrl);
     return avatarUrl;
+  });
+  ipcMain.handle("companion:forget-fact", (_event, id) => store.forgetFact(String(id || "")));
+  ipcMain.handle("companion:set-proactive", (_event, enabled) => store.setProactiveEnabled(enabled));
+  ipcMain.handle("companion:clear", () => store.clearCompanion());
+  ipcMain.handle("companion:greeting", () => proactiveGreeting(store.data.companion, store.data.pet.name));
+  ipcMain.handle("companion:export", async () => {
+    const result = await dialog.showSaveDialog(mainWindow, { title: "备份陪伴数据", defaultPath: `neopet-backup-${new Date().toISOString().slice(0, 10)}.json`, filters: [{ name: "NeoPet 备份", extensions: ["json"] }] });
+    if (result.canceled || !result.filePath) return { canceled: true };
+    fs.writeFileSync(result.filePath, JSON.stringify(store.exportData(), null, 2), "utf8");
+    return { canceled: false, filePath: result.filePath };
+  });
+  ipcMain.handle("companion:import", async () => {
+    const result = await dialog.showOpenDialog(mainWindow, { title: "导入陪伴数据", properties: ["openFile"], filters: [{ name: "NeoPet 备份", extensions: ["json"] }] });
+    if (result.canceled || !result.filePaths[0]) return { canceled: true };
+    return { canceled: false, state: store.importData(JSON.parse(fs.readFileSync(result.filePaths[0], "utf8"))) };
   });
   ipcMain.handle("window:set-compact", (_event, compact) => {
     mainWindow.setSize(compact ? 320 : 440, compact ? 390 : 720, true);

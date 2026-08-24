@@ -130,6 +130,15 @@
         <p class="hint">
           电影和动画只能作为风格灵感，请使用原创或已获授权的角色素材。
         </p>
+        <section class="companion-settings">
+          <h3>陪伴与记忆</h3>
+          <div class="bond-card"><div><strong id="mobileRelationshipStage">初识</strong><span id="mobileRelationshipStats">信任 0 · 连续 0 天</span></div><div class="bond-track"><i id="mobileBondProgress"></i></div></div>
+          <label class="toggle-row"><input id="mobileProactiveEnabled" type="checkbox" />允许宠物主动问候</label>
+          <h4>记住的事情</h4><div id="mobileMemoryFacts" class="memory-list"><p class="hint">还没有长期记忆</p></div>
+          <h4>陪伴日记</h4><div id="mobileCompanionDiary" class="memory-list"><p class="hint">日记会随着相处逐渐出现</p></div>
+          <div class="data-actions"><button id="mobileExportButton" type="button" class="secondary">备份</button><label class="secondary import-button">导入<input id="mobileImportInput" type="file" accept="application/json" /></label></div>
+          <button id="mobileClearCompanion" type="button" class="secondary danger">清除全部陪伴数据</button>
+        </section>
         <button id="saveSettingsButton" class="primary" value="cancel">
           保存
         </button>

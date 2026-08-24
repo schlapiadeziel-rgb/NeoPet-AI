@@ -18,6 +18,14 @@ contextBridge.exposeInMainWorld("neopet", {
   pet: {
     importAvatar: () => ipcRenderer.invoke("pet:import-avatar")
   },
+  companion: {
+    forgetFact: (id) => ipcRenderer.invoke("companion:forget-fact", id),
+    setProactive: (enabled) => ipcRenderer.invoke("companion:set-proactive", enabled),
+    clear: () => ipcRenderer.invoke("companion:clear"),
+    greeting: () => ipcRenderer.invoke("companion:greeting"),
+    exportData: () => ipcRenderer.invoke("companion:export"),
+    importData: () => ipcRenderer.invoke("companion:import")
+  },
   window: {
     setCompact: (compact) => ipcRenderer.invoke("window:set-compact", compact),
     hide: () => ipcRenderer.invoke("window:hide"),

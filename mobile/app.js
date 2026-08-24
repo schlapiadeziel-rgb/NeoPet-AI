@@ -29,6 +29,8 @@ const ui = {
   modelFile: $("#modelFileInput"),
   save: $("#saveSettingsButton"),
   restore: $("#restorePetButton"),
+  relationshipStage: $("#mobileRelationshipStage"), relationshipStats: $("#mobileRelationshipStats"), bondProgress: $("#mobileBondProgress"),
+  proactive: $("#mobileProactiveEnabled"), facts: $("#mobileMemoryFacts"), diary: $("#mobileCompanionDiary"), exportData: $("#mobileExportButton"), importData: $("#mobileImportInput"), clearCompanion: $("#mobileClearCompanion"),
   status: $("#settingsStatus"),
 };
 const defaults = {
@@ -46,6 +48,8 @@ let config = {
   ...defaults,
   ...JSON.parse(localStorage.getItem("neopet-mobile-config") || "{}"),
 };
+const companionDefaults = { trust: 0, xp: 0, stage: "初识", mood: "平静", streakDays: 0, lastInteractionAt: "", facts: [], diary: [], proactiveEnabled: true };
+let companion = { ...companionDefaults, ...JSON.parse(localStorage.getItem("neopet-mobile-companion") || "{}") };
 let conversation = [];
 let recognition;
 let idleTimer;
@@ -55,6 +59,31 @@ let spriteTimer;
 let lookResetTimer;
 let currentPetState = "idle";
 let localModelObjectUrl = "";
+
+function saveCompanion() { localStorage.setItem("neopet-mobile-companion", JSON.stringify(companion)); }
+function relationshipStage(xp) { return xp >= 500 ? "灵魂伙伴" : xp >= 250 ? "挚友" : xp >= 100 ? "亲密" : xp >= 30 ? "熟悉" : "初识"; }
+function extractFacts(text) {
+  const patterns = [/(?:我叫|叫我|my name is)\s*([^，。,.!?！?\n]{1,24})/i, /(?:我喜欢|我爱|i like|i love)\s*([^，。,.!?！?\n]{1,40})/i, /(?:我不喜欢|我讨厌|i dislike|i hate)\s*([^，。,.!?！?\n]{1,40})/i, /(?:我住在|我来自|i live in|i am from)\s*([^，。,.!?！?\n]{1,32})/i];
+  return patterns.map((pattern) => text.match(pattern)?.[0]?.trim()).filter(Boolean);
+}
+function advanceCompanion(userText, reply, emotion) {
+  const now = new Date();
+  const previous = companion.lastInteractionAt ? new Date(companion.lastInteractionAt) : null;
+  const day = 86400000;
+  if (!previous) companion.streakDays = 1;
+  else { const gap = Math.floor((new Date(now.toDateString()) - new Date(previous.toDateString())) / day); companion.streakDays = gap === 1 ? companion.streakDays + 1 : gap > 1 ? 1 : Math.max(1, companion.streakDays); }
+  companion.xp += 10; companion.trust = Math.min(100, companion.trust + 2); companion.stage = relationshipStage(companion.xp); companion.mood = emotion === "sad" ? "担心" : emotion === "happy" ? "开心" : emotion === "excited" ? "兴奋" : "平静";
+  for (const fact of extractFacts(userText)) if (!companion.facts.some((item) => item.text === fact)) companion.facts.push({ id: `${Date.now()}-${Math.random().toString(16).slice(2)}`, text: fact, at: now.toISOString() });
+  companion.facts = companion.facts.slice(-100);
+  if (!previous || now - previous >= 4 * 60 * 60 * 1000) companion.diary.push({ at: now.toISOString(), text: `今天我们聊到：“${userText.slice(0, 48)}”。${config.name}回答：“${reply.slice(0, 56)}”` });
+  companion.diary = companion.diary.slice(-90); companion.lastInteractionAt = now.toISOString(); saveCompanion(); renderCompanion();
+}
+function memoryContext() { return companion.facts.length ? `你长期记得用户这些信息：${companion.facts.slice(-12).map((item) => item.text).join("；")}。当前关系：${companion.stage}，信任${companion.trust}。` : `当前关系：${companion.stage}，信任${companion.trust}。`; }
+function renderCompanion() {
+  ui.relationshipStage.textContent = companion.stage; ui.relationshipStats.textContent = `信任 ${companion.trust} · 连续 ${companion.streakDays} 天 · ${companion.mood}`; ui.bondProgress.style.width = `${Math.min(100, companion.xp % 100)}%`; ui.proactive.checked = companion.proactiveEnabled !== false;
+  ui.facts.replaceChildren(...(companion.facts.length ? companion.facts.slice().reverse().map((fact) => { const row = document.createElement("div"); row.className = "memory-row"; const span = document.createElement("span"); span.textContent = fact.text; const button = document.createElement("button"); button.type = "button"; button.textContent = "忘记"; button.onclick = () => { companion.facts = companion.facts.filter((item) => item.id !== fact.id); saveCompanion(); renderCompanion(); }; row.append(span, button); return row; }) : [Object.assign(document.createElement("p"), { className: "hint", textContent: "还没有长期记忆" })]));
+  ui.diary.replaceChildren(...(companion.diary.length ? companion.diary.slice(-5).reverse().map((entry) => Object.assign(document.createElement("div"), { className: "diary-row", textContent: `${new Date(entry.at).toLocaleDateString()} · ${entry.text}` })) : [Object.assign(document.createElement("p"), { className: "hint", textContent: "日记会随着相处逐渐出现" })]));
+}
 
 const PETS = [
   { id: "xiaonuo", name: "小诺", description: "温暖机敏的像素机器人", personality: "温柔、机灵、简洁，会根据回答选择自然动作。", pixelated: true },
@@ -272,7 +301,7 @@ async function sendMessage(text) {
     const apiKey = sessionStorage.getItem("neopet-api-key") || "";
     if (!config.baseUrl || !config.model)
       throw new Error("请先在设置中填写 API 地址和聊天模型");
-    const system = `你是名为${config.name}的AI桌面宠物。性格：${config.personality}。回复用户使用与用户相同的语言，并只输出JSON：{"reply":"回答","emotion":"neutral|happy|sad|curious|excited","action":"speaking|wave|happy|dance|sleep"}。`;
+    const system = `你是名为${config.name}的AI桌面宠物。性格：${config.personality}。${memoryContext()}回复用户使用与用户相同的语言，并只输出JSON：{"reply":"回答","emotion":"neutral|happy|sad|curious|excited","action":"speaking|wave|happy|dance|sleep"}。`;
     const response = await fetch(
       `${config.baseUrl.replace(/\/$/, "")}/chat/completions`,
       {
@@ -296,6 +325,7 @@ async function sendMessage(text) {
     const result = parseEnvelope(data.choices?.[0]?.message?.content);
     conversation.push({ role: "assistant", content: result.reply });
     appendMessage("assistant", result.reply);
+    advanceCompanion(content, result.reply, result.emotion);
     speak(result.reply, result.action, result.emotion);
   } catch (error) {
     const message = `连接失败：${error.message}`;
@@ -316,6 +346,7 @@ function applyConfig() {
   applyBuiltInPet(config.petId);
   applyVisualMode(localModelObjectUrl);
   renderPetPicker();
+  renderCompanion();
 }
 function setupRecognition() {
   const Recognition =
@@ -456,6 +487,10 @@ ui.restore.addEventListener("click", () => {
   applyConfig();
   ui.dialog.close();
 });
+ui.proactive.addEventListener("change", () => { companion.proactiveEnabled = ui.proactive.checked; saveCompanion(); });
+ui.exportData.addEventListener("click", () => { const blob = new Blob([JSON.stringify({ schemaVersion: 1, exportedAt: new Date().toISOString(), config: { ...config }, conversation, companion }, null, 2)], { type: "application/json" }); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `neopet-backup-${new Date().toISOString().slice(0, 10)}.json`; link.click(); setTimeout(() => URL.revokeObjectURL(link.href), 1000); });
+ui.importData.addEventListener("change", async () => { try { const value = JSON.parse(await ui.importData.files[0].text()); if (value.schemaVersion !== 1) throw new Error("格式不支持"); if (value.config) { config = { ...defaults, ...value.config }; localStorage.setItem("neopet-mobile-config", JSON.stringify(config)); } if (value.companion) { companion = { ...companionDefaults, ...value.companion }; saveCompanion(); } conversation = Array.isArray(value.conversation) ? value.conversation.slice(-30) : []; applyConfig(); ui.status.textContent = "备份已导入"; } catch (error) { ui.status.textContent = `导入失败：${error.message}`; } });
+ui.clearCompanion.addEventListener("click", () => { if (!confirm("这会删除对话、长期记忆、关系等级和日记，确定继续吗？")) return; companion = { ...companionDefaults, facts: [], diary: [] }; conversation = []; saveCompanion(); ui.messages.replaceChildren(); renderCompanion(); ui.status.textContent = "陪伴数据已清除"; });
 window.addEventListener("beforeinstallprompt", (event) => {
   event.preventDefault();
   installPrompt = event;
@@ -472,5 +507,6 @@ setupRecognition();
 setupAndroidOverlay();
 setState("idle");
 scheduleIdle();
+if (companion.proactiveEnabled !== false && Date.now() - (Date.parse(companion.lastInteractionAt) || 0) > 6 * 60 * 60 * 1000) showBubble(companion.streakDays > 1 ? `欢迎回来！我们已经连续见面 ${companion.streakDays} 天了。` : `你好呀，我是${config.name}。今天想和我聊什么？`, 7000);
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol))
   navigator.serviceWorker.register("sw.js");

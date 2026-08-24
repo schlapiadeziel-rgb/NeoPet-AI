@@ -1,6 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { safeStorage } = require("electron");
+const { advanceCompanion, createCompanionState } = require("../shared/companion");
 
 const DEFAULTS = {
   session: null,
@@ -21,7 +22,8 @@ const DEFAULTS = {
     language: "auto",
     speechRate: 1
   },
-  memory: []
+  memory: [],
+  companion: createCompanionState()
 };
 
 class ConfigStore {
@@ -39,7 +41,8 @@ class ConfigStore {
         ...saved,
         ai: { ...DEFAULTS.ai, ...saved.ai },
         pet: { ...DEFAULTS.pet, ...saved.pet },
-        memory: Array.isArray(saved.memory) ? saved.memory.slice(-30) : []
+        memory: Array.isArray(saved.memory) ? saved.memory.slice(-30) : [],
+        companion: { ...createCompanionState(), ...(saved.companion || {}), facts: Array.isArray(saved.companion?.facts) ? saved.companion.facts.slice(0, 100) : [], diary: Array.isArray(saved.companion?.diary) ? saved.companion.diary.slice(0, 90) : [] }
       };
     } catch {
       this.persist();
@@ -61,7 +64,8 @@ class ConfigStore {
         hasApiKey: Boolean(this.data.ai.encryptedApiKey)
       },
       pet: this.data.pet,
-      memory: this.data.memory
+      memory: this.data.memory,
+      companion: this.data.companion
     };
   }
 
@@ -121,6 +125,43 @@ class ConfigStore {
   clearMemory() {
     this.data.memory = [];
     this.persist();
+  }
+
+  recordInteraction(value) {
+    this.data.companion = advanceCompanion(this.data.companion, value);
+    this.persist();
+    return this.publicState();
+  }
+
+  forgetFact(id) {
+    this.data.companion.facts = this.data.companion.facts.filter((item) => item.id !== id);
+    this.persist();
+    return this.publicState();
+  }
+
+  setProactiveEnabled(enabled) {
+    this.data.companion.proactiveEnabled = Boolean(enabled);
+    this.persist();
+    return this.publicState();
+  }
+
+  clearCompanion() {
+    this.data.memory = [];
+    this.data.companion = createCompanionState();
+    this.persist();
+    return this.publicState();
+  }
+
+  exportData() {
+    return { schemaVersion: 1, exportedAt: new Date().toISOString(), pet: this.data.pet, memory: this.data.memory, companion: this.data.companion };
+  }
+
+  importData(value) {
+    if (!value || value.schemaVersion !== 1) throw new Error("不支持的备份格式");
+    if (Array.isArray(value.memory)) this.data.memory = value.memory.slice(-30);
+    if (value.companion && typeof value.companion === "object") this.data.companion = { ...createCompanionState(), ...value.companion, facts: Array.isArray(value.companion.facts) ? value.companion.facts.slice(0, 100) : [], diary: Array.isArray(value.companion.diary) ? value.companion.diary.slice(0, 90) : [] };
+    this.persist();
+    return this.publicState();
   }
 }
 
