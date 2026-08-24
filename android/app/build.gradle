@@ -8,11 +8,20 @@ android {
         applicationId 'ai.neopet.mobile'
         minSdk 26
         targetSdk 36
-        versionCode 10
-        versionName '0.6.0'
+        versionCode 11
+        versionName '0.6.1'
     }
 
     sourceSets {
         main.assets.srcDirs = ['../../mobile']
     }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'androidx.webkit:webkit:1.14.0'
 }

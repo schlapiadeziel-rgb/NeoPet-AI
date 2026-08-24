@@ -1,4 +1,15 @@
 const $ = (selector) => document.querySelector(selector);
+function readLocalJson(key, fallback) {
+  try { const value = JSON.parse(localStorage.getItem(key) || "null"); return value && typeof value === "object" ? value : fallback; }
+  catch { localStorage.removeItem(key); return fallback; }
+}
+function normalizeBaseUrl(value) {
+  const text = String(value || "").trim().replace(/\/$/, "");
+  if (!text) return "";
+  let url; try { url = new URL(text); } catch { throw new Error("API 地址格式不正确"); }
+  if (!["http:", "https:"].includes(url.protocol) || url.username || url.password) throw new Error("API 地址不安全");
+  return url.href.replace(/\/$/, "");
+}
 const ui = {
   stage: $("#petStage"),
   bubble: $("#speechBubble"),
@@ -49,12 +60,12 @@ const defaults = {
 };
 let config = {
   ...defaults,
-  ...JSON.parse(localStorage.getItem("neopet-mobile-config") || "{}"),
+  ...readLocalJson("neopet-mobile-config", {}),
 };
 const companionDefaults = { trust: 0, xp: 0, stage: "初识", mood: "平静", streakDays: 0, lastInteractionAt: "", facts: [], diary: [], proactiveEnabled: true };
-let companion = { ...companionDefaults, ...JSON.parse(localStorage.getItem("neopet-mobile-companion") || "{}") };
+let companion = { ...companionDefaults, ...readLocalJson("neopet-mobile-companion", {}) };
 const careDefaults = { hunger: 82, energy: 86, happiness: 88, cleanliness: 90, level: 1, xp: 0, coins: 120, inventory: { food: 3, snack: 1, soap: 2 } };
-let care = { ...careDefaults, ...JSON.parse(localStorage.getItem("neopet-mobile-care") || "{}") }; care.inventory = { ...careDefaults.inventory, ...(care.inventory || {}) };
+let care = { ...careDefaults, ...readLocalJson("neopet-mobile-care", {}) }; care.inventory = { ...careDefaults.inventory, ...(care.inventory || {}) };
 let conversation = [];
 let recognition;
 let idleTimer;
@@ -65,7 +76,7 @@ let lookResetTimer;
 let currentPetState = "idle";
 let localModelObjectUrl = "";
 let mobileFocusTimer;
-let todos = JSON.parse(localStorage.getItem("neopet-mobile-todos") || "[]");
+let todos = readLocalJson("neopet-mobile-todos", []); if (!Array.isArray(todos)) todos = [];
 function renderTodos(){ui.todoList.replaceChildren(...todos.map((todo,index)=>{const row=document.createElement("div");row.className=`todo-row${todo.done?" done":""}`;const check=document.createElement("input");check.type="checkbox";check.checked=todo.done;const span=document.createElement("span");span.textContent=todo.text;const del=document.createElement("button");del.type="button";del.textContent="删除";del.className="text-button";check.onchange=()=>{todo.done=check.checked;localStorage.setItem("neopet-mobile-todos",JSON.stringify(todos));renderTodos()};del.onclick=()=>{todos.splice(index,1);localStorage.setItem("neopet-mobile-todos",JSON.stringify(todos));renderTodos()};row.append(check,span,del);return row}))}
 
 function saveCompanion() { localStorage.setItem("neopet-mobile-companion", JSON.stringify(companion)); }
@@ -474,11 +485,12 @@ ui.modelUrl.addEventListener("change", () => {
   applyVisualMode();
 });
 ui.save.addEventListener("click", () => {
+  let baseUrl; try { baseUrl = normalizeBaseUrl(ui.baseUrl.value); } catch (error) { ui.status.textContent = error.message; return; }
   config = {
     ...config,
     name: ui.nameInput.value.trim() || defaults.name,
     personality: ui.personality.value.trim() || defaults.personality,
-    baseUrl: ui.baseUrl.value.trim(),
+    baseUrl,
     model: ui.model.value.trim(),
     language: ui.language.value,
     modelUrl: ui.modelUrl.value.trim(),
@@ -519,7 +531,7 @@ ui.install.addEventListener("click", async () => {
   ui.install.classList.add("hidden");
 });
 ui.todoAdd.addEventListener("click",()=>{const text=ui.todoInput.value.trim().slice(0,100);if(!text)return;todos.unshift({text,done:false});ui.todoInput.value="";localStorage.setItem("neopet-mobile-todos",JSON.stringify(todos));renderTodos()});
-ui.focus.addEventListener("click",()=>{if(mobileFocusTimer){clearInterval(mobileFocusTimer);mobileFocusTimer=null;ui.focus.textContent="开始专注";ui.focusStatus.textContent="已取消";return}let left=Math.max(1,Math.min(180,Number(ui.focusMinutes.value)||25))*60;ui.focus.textContent="取消";const tick=()=>{ui.focusStatus.textContent=`剩余 ${Math.floor(left/60)}:${String(left%60).padStart(2,"0")}`;if(left--<=0){clearInterval(mobileFocusTimer);mobileFocusTimer=null;ui.focus.textContent="开始专注";ui.focusStatus.textContent="专注完成";showBubble("专注完成，活动一下吧！",5000)}};tick();mobileFocusTimer=setInterval(tick,1000)});
+ui.focus.addEventListener("click",()=>{if(mobileFocusTimer){clearInterval(mobileFocusTimer);mobileFocusTimer=null;ui.focus.textContent="开始专注";ui.focusStatus.textContent="已取消";return}const deadline=Date.now()+Math.max(1,Math.min(180,Number(ui.focusMinutes.value)||25))*60000;ui.focus.textContent="取消";const tick=()=>{const left=Math.max(0,Math.ceil((deadline-Date.now())/1000));ui.focusStatus.textContent=`剩余 ${Math.floor(left/60)}:${String(left%60).padStart(2,"0")}`;if(left<=0){clearInterval(mobileFocusTimer);mobileFocusTimer=null;ui.focus.textContent="开始专注";ui.focusStatus.textContent="专注完成";showBubble("专注完成，活动一下吧！",5000)}};tick();mobileFocusTimer=setInterval(tick,1000)});
 ui.weather.addEventListener("click",async()=>{ui.weatherResult.textContent="查询中…";try{const city=ui.weatherCity.value.trim();if(!city)throw new Error("请输入城市");const response=await fetch(`https://wttr.in/${encodeURIComponent(city)}?format=j1`);if(!response.ok)throw new Error("天气服务暂不可用");const current=(await response.json()).current_condition?.[0];ui.weatherResult.textContent=`${city} · ${current?.weatherDesc?.[0]?.value||""} · ${current?.temp_C}°C`}catch(e){ui.weatherResult.textContent=e.message}});
 applyConfig();
 renderTodos();

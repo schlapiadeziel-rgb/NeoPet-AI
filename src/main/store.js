@@ -30,6 +30,16 @@ const DEFAULTS = {
   productivity: { todos: [], focusMinutes: 25, reminderMinutes: 60 }
 };
 
+function normalizeBaseUrl(value) {
+  const text = String(value || "").trim().replace(/\/$/, "");
+  if (!text) return "";
+  let url;
+  try { url = new URL(text); } catch { throw new Error("API 地址格式不正确"); }
+  if (url.protocol !== "https:" && url.protocol !== "http:") throw new Error("API 地址只支持 HTTP 或 HTTPS");
+  if (url.username || url.password) throw new Error("API 地址不能包含账号或密码");
+  return url.href.replace(/\/$/, "");
+}
+
 class ConfigStore {
   constructor(userDataPath) {
     this.file = path.join(userDataPath, "neopet-state.json");
@@ -81,7 +91,7 @@ class ConfigStore {
 
   saveConfig({ ai = {}, pet = {}, runtime = {} }) {
     const nextAi = { ...this.data.ai };
-    if (typeof ai.baseUrl === "string") nextAi.baseUrl = ai.baseUrl.trim().replace(/\/$/, "");
+    if (typeof ai.baseUrl === "string") nextAi.baseUrl = normalizeBaseUrl(ai.baseUrl);
     if (typeof ai.model === "string") nextAi.model = ai.model.trim();
     if (typeof ai.imageModel === "string") nextAi.imageModel = ai.imageModel.trim();
     if (typeof ai.apiKey === "string" && ai.apiKey.trim()) {
@@ -189,4 +199,4 @@ class ConfigStore {
   }
 }
 
-module.exports = { ConfigStore };
+module.exports = { ConfigStore, normalizeBaseUrl };
