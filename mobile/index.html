@@ -58,6 +58,8 @@
         ><button id="micButton"><span aria-hidden="true">◉</span>说话</button>
       </section>
 
+      <section class="care-card"><div class="care-heading"><strong>Lv.<span id="mobileCareLevel">1</span></strong><span><b id="mobileCareCoins">120</b> 金币</span></div><div class="care-meters"><button data-care="feed"><span>饱腹</span><i><b id="mobileCareHunger"></b></i></button><button data-care="rest"><span>精力</span><i><b id="mobileCareEnergy"></b></i></button><button data-care="play"><span>开心</span><i><b id="mobileCareHappiness"></b></i></button><button data-care="bath"><span>清洁</span><i><b id="mobileCareCleanliness"></b></i></button></div></section>
+
       <section class="chat-card">
         <header class="chat-heading"><div><strong>和 <span id="mobileChatPetName">小诺</span> 聊天</strong><small>会记住重要的事，也会用动作回应你</small></div><span>本地记忆</span></header>
         <div id="messages" class="messages" aria-live="polite">
@@ -126,10 +128,10 @@
           >导入原创宠物图片<input
             id="avatarInput"
             type="file"
-            accept="image/png,image/webp,image/jpeg"
+            accept="image/png,image/webp,image/jpeg,image/gif"
         /></label>
-        <label>3D 模型网址（GLB/GLTF）<input id="modelUrlInput" type="url" placeholder="https://example.com/pet.glb" /></label>
-        <label>导入本地 3D 模型<input id="modelFileInput" type="file" accept=".glb,.gltf,model/gltf-binary,model/gltf+json" /></label>
+        <label>3D 模型网址（GLB/GLTF/VRM）<input id="modelUrlInput" type="url" placeholder="https://example.com/pet.glb" /></label>
+        <label>导入本地 3D/VRM 模型<input id="modelFileInput" type="file" accept=".glb,.gltf,.vrm,model/gltf-binary,model/gltf+json" /></label>
         <p class="hint">
           电影和动画只能作为风格灵感，请使用原创或已获授权的角色素材。
         </p>
@@ -142,6 +144,8 @@
           <div class="data-actions"><button id="mobileExportButton" type="button" class="secondary">备份</button><label class="secondary import-button">导入<input id="mobileImportInput" type="file" accept="application/json" /></label></div>
           <button id="mobileClearCompanion" type="button" class="secondary danger">清除全部陪伴数据</button>
         </section>
+        <section class="companion-settings"><h3>宠物商店</h3><p class="hint">食物 <b id="mobileFoodCount">0</b> · 零食 <b id="mobileSnackCount">0</b> · 清洁 <b id="mobileSoapCount">0</b></p><div class="shop-grid"><button type="button" class="secondary" data-buy="food">食物 ×3<br><small>15 金币</small></button><button type="button" class="secondary" data-buy="snack">零食 ×2<br><small>12 金币</small></button><button type="button" class="secondary" data-buy="soap">清洁 ×2<br><small>10 金币</small></button></div></section>
+        <section class="companion-settings"><h3>效率工具</h3><div class="inline-tool"><input id="mobileTodoInput" placeholder="添加待办"><button id="mobileTodoAdd" type="button" class="secondary">添加</button></div><div id="mobileTodoList" class="tool-results"></div><div class="inline-tool"><input id="mobileFocusMinutes" type="number" min="1" max="180" value="25"><button id="mobileFocusButton" type="button" class="secondary">开始专注</button></div><p id="mobileFocusStatus" class="hint">尚未开始</p><div class="inline-tool"><input id="mobileWeatherCity" placeholder="天气城市"><button id="mobileWeatherButton" type="button" class="secondary">查询</button></div><p id="mobileWeatherResult" class="hint"></p></section>
         <button id="saveSettingsButton" class="primary" value="cancel">
           保存
         </button>

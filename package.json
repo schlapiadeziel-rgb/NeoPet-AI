@@ -1,6 +1,6 @@
 {
   "name": "neopet-ai",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "AI desktop pet with voice, actions, cloud API, and optional local model endpoints",
   "main": "src/main/main.js",
   "license": "MIT",

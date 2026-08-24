@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { pathToFileURL } = require("node:url");
-const { app, BrowserWindow, dialog, globalShortcut, ipcMain, Menu, nativeImage, shell, Tray } = require("electron");
+const { app, BrowserWindow, clipboard, desktopCapturer, dialog, globalShortcut, ipcMain, Menu, nativeImage, shell, Tray } = require("electron");
 const { ConfigStore } = require("./store");
 const { OtpService } = require("./auth");
 const ai = require("./ai");
@@ -153,7 +153,7 @@ function registerIpc() {
     const result = await dialog.showOpenDialog(mainWindow, {
       title: "选择宠物图片",
       properties: ["openFile"],
-      filters: [{ name: "图片", extensions: ["png", "webp", "jpg", "jpeg"] }]
+      filters: [{ name: "图片或动画", extensions: ["png", "webp", "jpg", "jpeg", "gif"] }]
     });
     if (result.canceled || !result.filePaths[0]) return null;
     const source = result.filePaths[0];
@@ -166,6 +166,15 @@ function registerIpc() {
     return avatarUrl;
   });
   ipcMain.handle("companion:forget-fact", (_event, id) => store.forgetFact(String(id || "")));
+  ipcMain.handle("care:action", (_event, action) => store.careAction(String(action || "")));
+  ipcMain.handle("care:buy", (_event, item) => store.buyCareItem(String(item || "")));
+  ipcMain.handle("tools:todo-add", (_event, text) => store.addTodo(text));
+  ipcMain.handle("tools:todo-toggle", (_event, id) => store.toggleTodo(String(id || "")));
+  ipcMain.handle("tools:todo-delete", (_event, id) => store.deleteTodo(String(id || "")));
+  ipcMain.handle("tools:weather", async (_event, city) => { const value=String(city||"").trim().slice(0,80); if(!value)throw new Error("请输入城市"); const response=await fetch(`https://wttr.in/${encodeURIComponent(value)}?format=j1`,{signal:AbortSignal.timeout(8000)}); if(!response.ok)throw new Error("天气服务暂不可用"); const data=await response.json(); const current=data.current_condition?.[0]; return {city:value,temp:current?.temp_C,feels:current?.FeelsLikeC,text:current?.lang_zh?.[0]?.value||current?.weatherDesc?.[0]?.value||""}; });
+  ipcMain.handle("tools:launch", async () => { const result=await dialog.showOpenDialog(mainWindow,{title:"选择要启动的程序",properties:["openFile"],filters:process.platform==="win32"?[{name:"应用程序",extensions:["exe","bat","cmd"]}]:[]}); if(result.canceled||!result.filePaths[0])return {canceled:true}; const error=await shell.openPath(result.filePaths[0]); if(error)throw new Error(error); return {canceled:false}; });
+  ipcMain.handle("tools:translate-clipboard", async (_event, language) => { const text=clipboard.readText().trim().slice(0,6000); if(!text)throw new Error("剪贴板里没有文字"); const result=await ai.chat({config:store.data.ai,apiKey:store.apiKey(),pet:{name:"翻译助手",personality:"准确、自然，只给出翻译结果"},companion:null,messages:[{role:"user",content:`翻译为${String(language||"中文").slice(0,30)}：\n${text}`}]}); return result.reply; });
+  ipcMain.handle("tools:screen-ask", async (_event, question) => { const sources=await desktopCapturer.getSources({types:["screen"],thumbnailSize:{width:1280,height:720}}); if(!sources[0]||sources[0].thumbnail.isEmpty())throw new Error("无法读取当前屏幕"); return ai.vision({config:store.data.ai,apiKey:store.apiKey(),imageDataUrl:sources[0].thumbnail.toDataURL(),question}); });
   ipcMain.handle("companion:set-proactive", (_event, enabled) => store.setProactiveEnabled(enabled));
   ipcMain.handle("companion:clear", () => store.clearCompanion());
   ipcMain.handle("companion:greeting", () => proactiveGreeting(store.data.companion, store.data.pet.name));

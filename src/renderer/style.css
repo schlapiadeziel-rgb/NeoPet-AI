@@ -54,6 +54,7 @@ button { border: 0; cursor: pointer; }
 .compact-mode .pet-state-label { display: none; }
 .compact-mode .speech-bubble { top: 48px; }
 .compact-mode .quick-actions { display: none; }
+.compact-mode .care-card { display: none; }
 .compact-mode .compact-controls { display: flex; }
 .titlebar { z-index: 20; height: 45px; flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; border-radius: 15px; overflow: hidden; }
 .drag-region { -webkit-app-region: drag; flex: 1; height: 100%; display: flex; align-items: center; gap: 8px; padding: 0 14px; font-size: 12px; }
@@ -90,6 +91,7 @@ button { border: 0; cursor: pointer; }
 .quick-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; flex: 0 0 auto; }
 .quick-action { min-height: 42px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: 1px solid var(--line); border-radius: 13px; color: #e8e5f3; background: rgba(255,255,255,.06); font-size: 12px; }
 .quick-action:hover { border-color: rgba(128,103,255,.7); background: rgba(128,103,255,.14); }
+.care-card { flex: 0 0 auto; padding: 10px 12px; border-radius: 15px; }.care-heading { display: flex; justify-content: space-between; margin-bottom: 7px; color: var(--muted); font-size: 9px; }.care-heading strong { color: #bcfff9; }.care-meters { display: grid; grid-template-columns: repeat(4,1fr); gap: 7px; }.care-meters button { padding: 0; color: var(--muted); background: transparent; text-align: left; font-size: 8px; }.care-meters i { display: block; height: 4px; margin-top: 4px; overflow: hidden; border-radius: 9px; background: rgba(255,255,255,.08); }.care-meters b { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg,var(--cyan),var(--violet)); transition: width .3s; }.shop-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 7px; }.shop-grid button { min-width: 0; font-size: 10px; }.shop-grid small { color: var(--muted); font-size: 8px; }
 .quick-action span { color: var(--cyan); font-size: 16px; }
 .compact-controls { position: absolute; z-index: 18; left: 50%; bottom: 13px; display: none; gap: 12px; transform: translateX(-50%); }
 .compact-control { width: 42px; height: 42px; border: 1px solid rgba(255,255,255,.19); border-radius: 50%; color: white; background: rgba(19,17,27,.82); box-shadow: 0 10px 24px rgba(0,0,0,.26); backdrop-filter: blur(14px); font-size: 19px; }
@@ -178,3 +180,4 @@ button { border: 0; cursor: pointer; }
 .chat-panel { border-color: rgba(255,255,255,.14); background: linear-gradient(165deg, rgba(28,24,44,.94), rgba(15,13,26,.94)); }.chat-heading { display: flex; align-items: center; justify-content: space-between; padding: 12px 13px; border-bottom: 1px solid var(--line); }.chat-heading strong, .chat-heading small { display: block; }.chat-heading strong { font-size: 11px; }.chat-heading small { margin-top: 2px; color: var(--muted); font-size: 8px; }.privacy-chip { padding: 4px 7px; border-radius: 99px; color: #b8f1ed; background: rgba(88,219,211,.09); font-size: 8px; }
 .settings-panel { border-color: rgba(255,255,255,.15); background: linear-gradient(160deg, rgba(26,22,42,.98), rgba(12,11,21,.98)); }.panel-heading { background: rgba(255,255,255,.025); }.settings-scroll { display: grid; gap: 10px; }.setting-group { padding: 14px; border: 1px solid rgba(255,255,255,.09); border-radius: 16px; background: rgba(255,255,255,.025); }.setting-group h3 { display: flex; align-items: center; gap: 7px; }.setting-group h3::before { content: ""; width: 4px; height: 14px; border-radius: 4px; background: linear-gradient(var(--cyan), var(--violet)); }.account-card { border-color: rgba(88,219,211,.22); }
 .compact-mode .home-status, .compact-mode .scene-orb { display: none; }
+.inline-tool { display:flex; gap:7px; }.inline-tool input{min-width:0;flex:1}.inline-tool button{flex:0 0 auto}.tool-results{display:grid;gap:6px;margin:7px 0}.todo-row{display:flex;align-items:center;gap:7px;padding:7px;border:1px solid var(--line);border-radius:10px}.todo-row span{flex:1}.todo-row.done span{text-decoration:line-through;opacity:.55}.todo-row button{padding:4px 7px}

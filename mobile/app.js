@@ -4,6 +4,7 @@ const ui = {
   bubble: $("#speechBubble"),
   state: $("#stateLabel"),
   homeStage: $("#mobileHomeStage"), homeMood: $("#mobileHomeMood"), homeMemories: $("#mobileHomeMemories"), chatPetName: $("#mobileChatPetName"),
+  careLevel: $("#mobileCareLevel"), careCoins: $("#mobileCareCoins"), careHunger: $("#mobileCareHunger"), careEnergy: $("#mobileCareEnergy"), careHappiness: $("#mobileCareHappiness"), careCleanliness: $("#mobileCareCleanliness"), foodCount: $("#mobileFoodCount"), snackCount: $("#mobileSnackCount"), soapCount: $("#mobileSoapCount"),
   pet: $("#defaultPet"),
   custom: $("#customPet"),
   petModel: $("#petModel"),
@@ -32,6 +33,7 @@ const ui = {
   restore: $("#restorePetButton"),
   relationshipStage: $("#mobileRelationshipStage"), relationshipStats: $("#mobileRelationshipStats"), bondProgress: $("#mobileBondProgress"),
   proactive: $("#mobileProactiveEnabled"), facts: $("#mobileMemoryFacts"), diary: $("#mobileCompanionDiary"), exportData: $("#mobileExportButton"), importData: $("#mobileImportInput"), clearCompanion: $("#mobileClearCompanion"),
+  todoInput: $("#mobileTodoInput"), todoAdd: $("#mobileTodoAdd"), todoList: $("#mobileTodoList"), focusMinutes: $("#mobileFocusMinutes"), focus: $("#mobileFocusButton"), focusStatus: $("#mobileFocusStatus"), weatherCity: $("#mobileWeatherCity"), weather: $("#mobileWeatherButton"), weatherResult: $("#mobileWeatherResult"),
   status: $("#settingsStatus"),
 };
 const defaults = {
@@ -51,6 +53,8 @@ let config = {
 };
 const companionDefaults = { trust: 0, xp: 0, stage: "初识", mood: "平静", streakDays: 0, lastInteractionAt: "", facts: [], diary: [], proactiveEnabled: true };
 let companion = { ...companionDefaults, ...JSON.parse(localStorage.getItem("neopet-mobile-companion") || "{}") };
+const careDefaults = { hunger: 82, energy: 86, happiness: 88, cleanliness: 90, level: 1, xp: 0, coins: 120, inventory: { food: 3, snack: 1, soap: 2 } };
+let care = { ...careDefaults, ...JSON.parse(localStorage.getItem("neopet-mobile-care") || "{}") }; care.inventory = { ...careDefaults.inventory, ...(care.inventory || {}) };
 let conversation = [];
 let recognition;
 let idleTimer;
@@ -60,8 +64,14 @@ let spriteTimer;
 let lookResetTimer;
 let currentPetState = "idle";
 let localModelObjectUrl = "";
+let mobileFocusTimer;
+let todos = JSON.parse(localStorage.getItem("neopet-mobile-todos") || "[]");
+function renderTodos(){ui.todoList.replaceChildren(...todos.map((todo,index)=>{const row=document.createElement("div");row.className=`todo-row${todo.done?" done":""}`;const check=document.createElement("input");check.type="checkbox";check.checked=todo.done;const span=document.createElement("span");span.textContent=todo.text;const del=document.createElement("button");del.type="button";del.textContent="删除";del.className="text-button";check.onchange=()=>{todo.done=check.checked;localStorage.setItem("neopet-mobile-todos",JSON.stringify(todos));renderTodos()};del.onclick=()=>{todos.splice(index,1);localStorage.setItem("neopet-mobile-todos",JSON.stringify(todos));renderTodos()};row.append(check,span,del);return row}))}
 
 function saveCompanion() { localStorage.setItem("neopet-mobile-companion", JSON.stringify(companion)); }
+function saveCare() { localStorage.setItem("neopet-mobile-care", JSON.stringify(care)); }
+function renderCare() { ui.careLevel.textContent=care.level; ui.careCoins.textContent=care.coins; [[ui.careHunger,care.hunger],[ui.careEnergy,care.energy],[ui.careHappiness,care.happiness],[ui.careCleanliness,care.cleanliness]].forEach(([el,value])=>el.style.width=`${value}%`); ui.foodCount.textContent=care.inventory.food; ui.snackCount.textContent=care.inventory.snack; ui.soapCount.textContent=care.inventory.soap; }
+function performCare(action) { if(action==="feed"){if(!care.inventory.food)return showBubble("食物不够，请先购买。",2500);care.inventory.food--;care.hunger=Math.min(100,care.hunger+28)} if(action==="rest")care.energy=Math.min(100,care.energy+35); if(action==="play"){care.happiness=Math.min(100,care.happiness+20);care.energy=Math.max(0,care.energy-8)} if(action==="bath"){if(!care.inventory.soap)return showBubble("清洁用品不够。",2500);care.inventory.soap--;care.cleanliness=100} care.xp+=8;care.coins+=2;if(care.xp>=care.level*60){care.xp=0;care.level++;care.coins+=30}saveCare();renderCare();setState(action==="rest"?"sleep":"happy","happy");showBubble({feed:"好吃！",rest:"我休息一会儿。",play:"一起玩真开心！",bath:"干干净净啦！"}[action],2200); }
 function relationshipStage(xp) { return xp >= 500 ? "灵魂伙伴" : xp >= 250 ? "挚友" : xp >= 100 ? "亲密" : xp >= 30 ? "熟悉" : "初识"; }
 function extractFacts(text) {
   const patterns = [/(?:我叫|叫我|my name is)\s*([^，。,.!?！?\n]{1,24})/i, /(?:我喜欢|我爱|i like|i love)\s*([^，。,.!?！?\n]{1,40})/i, /(?:我不喜欢|我讨厌|i dislike|i hate)\s*([^，。,.!?！?\n]{1,40})/i, /(?:我住在|我来自|i live in|i am from)\s*([^，。,.!?！?\n]{1,32})/i];
@@ -350,6 +360,7 @@ function applyConfig() {
   applyVisualMode(localModelObjectUrl);
   renderPetPicker();
   renderCompanion();
+  renderCare();
 }
 function setupRecognition() {
   const Recognition =
@@ -490,6 +501,8 @@ ui.restore.addEventListener("click", () => {
   applyConfig();
   ui.dialog.close();
 });
+document.querySelectorAll("[data-care]").forEach((button)=>button.addEventListener("click",()=>performCare(button.dataset.care)));
+document.querySelectorAll("[data-buy]").forEach((button)=>button.addEventListener("click",()=>{const offer={food:[15,3],snack:[12,2],soap:[10,2]}[button.dataset.buy];if(care.coins<offer[0]){ui.status.textContent="金币不够";return}care.coins-=offer[0];care.inventory[button.dataset.buy]+=offer[1];saveCare();renderCare();ui.status.textContent="购买成功";}));
 ui.proactive.addEventListener("change", () => { companion.proactiveEnabled = ui.proactive.checked; saveCompanion(); });
 ui.exportData.addEventListener("click", () => { const blob = new Blob([JSON.stringify({ schemaVersion: 1, exportedAt: new Date().toISOString(), config: { ...config }, conversation, companion }, null, 2)], { type: "application/json" }); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `neopet-backup-${new Date().toISOString().slice(0, 10)}.json`; link.click(); setTimeout(() => URL.revokeObjectURL(link.href), 1000); });
 ui.importData.addEventListener("change", async () => { try { const value = JSON.parse(await ui.importData.files[0].text()); if (value.schemaVersion !== 1) throw new Error("格式不支持"); if (value.config) { config = { ...defaults, ...value.config }; localStorage.setItem("neopet-mobile-config", JSON.stringify(config)); } if (value.companion) { companion = { ...companionDefaults, ...value.companion }; saveCompanion(); } conversation = Array.isArray(value.conversation) ? value.conversation.slice(-30) : []; applyConfig(); ui.status.textContent = "备份已导入"; } catch (error) { ui.status.textContent = `导入失败：${error.message}`; } });
@@ -505,7 +518,11 @@ ui.install.addEventListener("click", async () => {
   installPrompt = null;
   ui.install.classList.add("hidden");
 });
+ui.todoAdd.addEventListener("click",()=>{const text=ui.todoInput.value.trim().slice(0,100);if(!text)return;todos.unshift({text,done:false});ui.todoInput.value="";localStorage.setItem("neopet-mobile-todos",JSON.stringify(todos));renderTodos()});
+ui.focus.addEventListener("click",()=>{if(mobileFocusTimer){clearInterval(mobileFocusTimer);mobileFocusTimer=null;ui.focus.textContent="开始专注";ui.focusStatus.textContent="已取消";return}let left=Math.max(1,Math.min(180,Number(ui.focusMinutes.value)||25))*60;ui.focus.textContent="取消";const tick=()=>{ui.focusStatus.textContent=`剩余 ${Math.floor(left/60)}:${String(left%60).padStart(2,"0")}`;if(left--<=0){clearInterval(mobileFocusTimer);mobileFocusTimer=null;ui.focus.textContent="开始专注";ui.focusStatus.textContent="专注完成";showBubble("专注完成，活动一下吧！",5000)}};tick();mobileFocusTimer=setInterval(tick,1000)});
+ui.weather.addEventListener("click",async()=>{ui.weatherResult.textContent="查询中…";try{const city=ui.weatherCity.value.trim();if(!city)throw new Error("请输入城市");const response=await fetch(`https://wttr.in/${encodeURIComponent(city)}?format=j1`);if(!response.ok)throw new Error("天气服务暂不可用");const current=(await response.json()).current_condition?.[0];ui.weatherResult.textContent=`${city} · ${current?.weatherDesc?.[0]?.value||""} · ${current?.temp_C}°C`}catch(e){ui.weatherResult.textContent=e.message}});
 applyConfig();
+renderTodos();
 setupRecognition();
 setupAndroidOverlay();
 setState("idle");

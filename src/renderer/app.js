@@ -5,6 +5,7 @@ const elements = {
   sendCode: $("#sendCodeButton"), verifyCode: $("#verifyCodeButton"), authStatus: $("#authStatus"), petStage: $("#petStage"),
   defaultPet: $("#defaultPet"), customPet: $("#customPet"), petModel: $("#petModel"), speechBubble: $("#speechBubble"), petStateLabel: $("#petStateLabel"), homeRelationshipStage: $("#homeRelationshipStage"), homeMood: $("#homeMood"), homeMemoryCount: $("#homeMemoryCount"), chatPetName: $("#chatPetName"),
   messages: $("#messages"), chatForm: $("#chatForm"), messageInput: $("#messageInput"), mic: $("#micButton"), chatPanel: $("#chatPanel"),
+  careLevel: $("#careLevel"), careCoins: $("#careCoins"), careHunger: $("#careHunger"), careEnergy: $("#careEnergy"), careHappiness: $("#careHappiness"), careCleanliness: $("#careCleanliness"), foodCount: $("#foodCount"), snackCount: $("#snackCount"), soapCount: $("#soapCount"),
   touch: $("#touchButton"), wave: $("#waveButton"), quickMic: $("#quickMicButton"), compactMic: $("#compactMicButton"), compactChat: $("#compactChatButton"),
   compact: $("#compactButton"), settings: $("#settingsButton"), hide: $("#hideButton"), settingsPanel: $("#settingsPanel"),
   closeSettings: $("#closeSettingsButton"), petTitle: $("#petTitle"), accountEmail: $("#accountEmail"), accountStatus: $("#accountStatus"), switchAccount: $("#switchAccountButton"), petPicker: $("#petPicker"), petName: $("#petNameInput"), personality: $("#personalityInput"),
@@ -13,6 +14,7 @@ const elements = {
   restoreAvatar: $("#restoreAvatarButton"), modelUrl: $("#modelUrlInput"), modelFile: $("#modelFileInput"), language: $("#languageSelect"), voice: $("#voiceSelect"), speechRate: $("#speechRateInput"), speechRateValue: $("#speechRateValue"), sttProvider: $("#sttProviderSelect"), ttsProvider: $("#ttsProviderSelect"), installRuntime: $("#installRuntimeButton"), ollamaPreset: $("#ollamaPresetButton"), runtimeStatusButton: $("#runtimeStatusButton"), runtimeStatus: $("#runtimeStatus"),
   relationshipStage: $("#relationshipStage"), relationshipStats: $("#relationshipStats"), bondProgress: $("#bondProgress"), proactiveEnabled: $("#proactiveEnabled"),
   memoryFacts: $("#memoryFacts"), companionDiary: $("#companionDiary"), exportMemory: $("#exportMemoryButton"), importMemory: $("#importMemoryButton"), clearCompanion: $("#clearCompanionButton"),
+  todoInput: $("#todoInput"), todoAdd: $("#todoAddButton"), todoList: $("#todoList"), focusMinutes: $("#focusMinutesInput"), focus: $("#focusButton"), focusStatus: $("#focusStatus"), weatherCity: $("#weatherCityInput"), weather: $("#weatherButton"), weatherResult: $("#weatherResult"), launch: $("#launchButton"), translateLanguage: $("#translateLanguageInput"), translate: $("#translateButton"), translateResult: $("#translateResult"), screenQuestion: $("#screenQuestionInput"), screenAsk: $("#screenAskButton"), screenResult: $("#screenResult"),
   saveSettings: $("#saveSettingsButton"), mediaCenter: $("#mediaCenterButton"), clearMemory: $("#clearMemoryButton"), logout: $("#logoutButton"), settingsStatus: $("#settingsStatus")
 };
 
@@ -28,6 +30,20 @@ let spriteTimer;
 let lookResetTimer;
 let currentPetState = "idle";
 let localModelObjectUrl = "";
+let focusTimer;
+
+function renderTodos() {
+  const todos = appState?.productivity?.todos || [];
+  elements.todoList.replaceChildren(...todos.map((todo) => {
+    const row = document.createElement("div"); row.className = `todo-row${todo.done ? " done" : ""}`;
+    const check = document.createElement("input"); check.type = "checkbox"; check.checked = todo.done;
+    const label = document.createElement("span"); label.textContent = todo.text;
+    const remove = document.createElement("button"); remove.className = "text-button"; remove.textContent = "删除";
+    check.addEventListener("change", async () => { appState = await window.neopet.tools.toggleTodo(todo.id); renderTodos(); });
+    remove.addEventListener("click", async () => { appState = await window.neopet.tools.deleteTodo(todo.id); renderTodos(); });
+    row.append(check, label, remove); return row;
+  }));
+}
 
 const PETS = [
   { id: "xiaonuo", name: "小诺", description: "温暖机敏的像素机器人", personality: "温暖、活泼、简洁，使用用户正在使用的语言回答。", pixelated: true },
@@ -236,6 +252,13 @@ function renderCompanion() {
   }) : [Object.assign(document.createElement("p"), { className: "hint", textContent: "日记会随着相处逐渐出现" })]));
 }
 
+function renderCare() {
+  const care = appState?.care || {};
+  elements.careLevel.textContent = care.level || 1; elements.careCoins.textContent = Math.floor(care.coins || 0);
+  [[elements.careHunger, care.hunger], [elements.careEnergy, care.energy], [elements.careHappiness, care.happiness], [elements.careCleanliness, care.cleanliness]].forEach(([bar, value]) => { bar.style.width = `${Math.max(0, Math.min(100, value || 0))}%`; });
+  elements.foodCount.textContent = care.inventory?.food || 0; elements.snackCount.textContent = care.inventory?.snack || 0; elements.soapCount.textContent = care.inventory?.soap || 0;
+}
+
 function populateSettings() {
   elements.accountEmail.textContent = appState.session?.email || "未登录";
   elements.accountStatus.textContent = appState.session?.verifiedAt ? `已验证 · ${new Date(appState.session.verifiedAt).toLocaleDateString()}` : "邮箱验证码账户";
@@ -258,6 +281,8 @@ function populateSettings() {
   applyVisualMode(localModelObjectUrl);
   renderPetPicker();
   renderCompanion();
+  renderCare();
+  renderTodos();
 }
 
 async function saveSettings() {
@@ -530,6 +555,14 @@ window.neopet.onOpenChat(() => setPetMode(false, true));
 
 elements.speechRate.addEventListener("input", () => { elements.speechRateValue.textContent = Number(elements.speechRate.value).toFixed(1); });
 elements.saveSettings.addEventListener("click", saveSettings);
+elements.todoAdd.addEventListener("click", async () => { try { appState = await window.neopet.tools.addTodo(elements.todoInput.value); elements.todoInput.value = ""; renderTodos(); } catch (error) { setStatus(elements.settingsStatus, error.message, true); } });
+elements.focus.addEventListener("click", () => { if (focusTimer) { clearInterval(focusTimer); focusTimer = null; elements.focus.textContent = "开始"; elements.focusStatus.textContent = "已取消"; return; } let remaining = Math.max(1, Math.min(180, Number(elements.focusMinutes.value) || 25)) * 60; elements.focus.textContent = "取消"; const tick = () => { elements.focusStatus.textContent = `剩余 ${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2,"0")}`; if (remaining-- <= 0) { clearInterval(focusTimer); focusTimer = null; elements.focus.textContent = "开始"; elements.focusStatus.textContent = "专注完成，休息一下吧"; showBubble("专注完成，活动一下吧！", 5000); } }; tick(); focusTimer = setInterval(tick, 1000); });
+elements.weather.addEventListener("click", async () => { elements.weatherResult.textContent = "查询中…"; try { const v = await window.neopet.tools.weather(elements.weatherCity.value); elements.weatherResult.textContent = `${v.city} · ${v.text} · ${v.temp}°C，体感 ${v.feels}°C`; } catch (e) { elements.weatherResult.textContent = e.message; } });
+elements.launch.addEventListener("click", async () => { try { const v = await window.neopet.tools.launch(); setStatus(elements.settingsStatus, v.canceled ? "已取消" : "程序已启动"); } catch (e) { setStatus(elements.settingsStatus, e.message, true); } });
+elements.translate.addEventListener("click", async () => { elements.translateResult.textContent = "翻译中…"; try { elements.translateResult.textContent = await window.neopet.tools.translateClipboard(elements.translateLanguage.value); } catch (e) { elements.translateResult.textContent = e.message; } });
+elements.screenAsk.addEventListener("click", async () => { elements.screenResult.textContent = "正在分析当前屏幕…"; try { elements.screenResult.textContent = await window.neopet.tools.screenAsk(elements.screenQuestion.value); } catch (e) { elements.screenResult.textContent = e.message; } });
+document.querySelectorAll("[data-care]").forEach((button) => button.addEventListener("click", async () => { try { appState = await window.neopet.care.action(button.dataset.care); renderCare(); applyPetState(button.dataset.care === "rest" ? "sleep" : "happy", "happy"); showBubble({ feed: "好吃！谢谢你。", play: "一起玩真开心！", bath: "现在干干净净啦！", rest: "我休息一会儿。" }[button.dataset.care], 2200); } catch (error) { showBubble(error.message, 3500); } }));
+document.querySelectorAll("[data-buy]").forEach((button) => button.addEventListener("click", async () => { try { appState = await window.neopet.care.buy(button.dataset.buy); renderCare(); setStatus(elements.settingsStatus, "购买成功"); } catch (error) { setStatus(elements.settingsStatus, error.message, true); } }));
 elements.installRuntime.addEventListener("click", async () => {
   if (!confirm("将从官方来源下载并安装 Ollama、Gemma 3 1B、Whisper Tiny 和 pyttsx3，约需 2.4GB 磁盘空间。继续吗？")) return;
   elements.installRuntime.disabled = true; elements.runtimeStatus.textContent = "正在应用内下载和安装，首次安装可能需要较长时间…";

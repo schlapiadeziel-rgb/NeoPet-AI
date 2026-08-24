@@ -2,6 +2,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { safeStorage } = require("electron");
 const { advanceCompanion, createCompanionState } = require("../shared/companion");
+const { buyItem, careAction, createCareState, refreshCare } = require("../shared/care");
 
 const DEFAULTS = {
   session: null,
@@ -24,7 +25,9 @@ const DEFAULTS = {
   },
   memory: [],
   companion: createCompanionState(),
-  runtime: { sttProvider: "system", ttsProvider: "system", whisperExe: "", whisperModel: "", pythonCommand: "python" }
+  runtime: { sttProvider: "system", ttsProvider: "system", whisperExe: "", whisperModel: "", pythonCommand: "python" },
+  care: createCareState(),
+  productivity: { todos: [], focusMinutes: 25, reminderMinutes: 60 }
 };
 
 class ConfigStore {
@@ -44,7 +47,9 @@ class ConfigStore {
         pet: { ...DEFAULTS.pet, ...saved.pet },
         memory: Array.isArray(saved.memory) ? saved.memory.slice(-30) : [],
         companion: { ...createCompanionState(), ...(saved.companion || {}), facts: Array.isArray(saved.companion?.facts) ? saved.companion.facts.slice(0, 100) : [], diary: Array.isArray(saved.companion?.diary) ? saved.companion.diary.slice(0, 90) : [] },
-        runtime: { ...DEFAULTS.runtime, ...(saved.runtime || {}) }
+        runtime: { ...DEFAULTS.runtime, ...(saved.runtime || {}) },
+        care: refreshCare(saved.care),
+        productivity: { ...DEFAULTS.productivity, ...(saved.productivity || {}), todos: Array.isArray(saved.productivity?.todos) ? saved.productivity.todos.slice(0, 100) : [] }
       };
     } catch {
       this.persist();
@@ -68,7 +73,9 @@ class ConfigStore {
       pet: this.data.pet,
       memory: this.data.memory,
       companion: this.data.companion,
-      runtime: this.data.runtime
+      runtime: this.data.runtime,
+      care: refreshCare(this.data.care),
+      productivity: this.data.productivity
     };
   }
 
@@ -162,6 +169,12 @@ class ConfigStore {
     this.persist();
     return this.publicState();
   }
+
+  careAction(action) { this.data.care = careAction(this.data.care, action); this.persist(); return this.publicState(); }
+  buyCareItem(item) { this.data.care = buyItem(this.data.care, item); this.persist(); return this.publicState(); }
+  addTodo(text) { const value=String(text||"").trim().slice(0,200); if(!value) throw new Error("请输入待办内容"); this.data.productivity.todos.unshift({id:`${Date.now()}`,text:value,done:false,at:new Date().toISOString()}); this.data.productivity.todos=this.data.productivity.todos.slice(0,100); this.persist(); return this.publicState(); }
+  toggleTodo(id) { const item=this.data.productivity.todos.find((todo)=>todo.id===id); if(item)item.done=!item.done; this.persist(); return this.publicState(); }
+  deleteTodo(id) { this.data.productivity.todos=this.data.productivity.todos.filter((todo)=>todo.id!==id); this.persist(); return this.publicState(); }
 
   exportData() {
     return { schemaVersion: 1, exportedAt: new Date().toISOString(), pet: this.data.pet, memory: this.data.memory, companion: this.data.companion };

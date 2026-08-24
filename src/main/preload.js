@@ -26,6 +26,19 @@ contextBridge.exposeInMainWorld("neopet", {
     exportData: () => ipcRenderer.invoke("companion:export"),
     importData: () => ipcRenderer.invoke("companion:import")
   },
+  care: {
+    action: (action) => ipcRenderer.invoke("care:action", action),
+    buy: (item) => ipcRenderer.invoke("care:buy", item)
+  },
+  tools: {
+    addTodo: (text) => ipcRenderer.invoke("tools:todo-add", text),
+    toggleTodo: (id) => ipcRenderer.invoke("tools:todo-toggle", id),
+    deleteTodo: (id) => ipcRenderer.invoke("tools:todo-delete", id),
+    weather: (city) => ipcRenderer.invoke("tools:weather", city),
+    launch: () => ipcRenderer.invoke("tools:launch"),
+    translateClipboard: (language) => ipcRenderer.invoke("tools:translate-clipboard", language),
+    screenAsk: (question) => ipcRenderer.invoke("tools:screen-ask", question)
+  },
   runtime: {
     status: () => ipcRenderer.invoke("runtime:status"),
     install: () => ipcRenderer.invoke("runtime:install"),

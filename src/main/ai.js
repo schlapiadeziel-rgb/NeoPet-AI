@@ -48,6 +48,22 @@ async function chat({ config, apiKey, pet, companion, messages }) {
   return parseAssistantEnvelope(content);
 }
 
+async function vision({ config, apiKey, imageDataUrl, question }) {
+  if (!config.baseUrl || !config.model) throw new Error("请先配置支持视觉的模型");
+  const headers = { "Content-Type": "application/json" };
+  if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
+  const body = await requestJson(`${config.baseUrl}/chat/completions`, {
+    method: "POST", headers,
+    body: JSON.stringify({ model: config.model, messages: [{ role: "user", content: [
+      { type: "text", text: String(question || "请说明屏幕上的主要内容").slice(0, 500) },
+      { type: "image_url", image_url: { url: imageDataUrl, detail: "low" } }
+    ] }] })
+  });
+  const content = body.choices?.[0]?.message?.content;
+  if (typeof content !== "string") throw new Error("视觉模型没有返回结果");
+  return content;
+}
+
 async function generatePet({ config, apiKey, prompt, outputDirectory }) {
   if (!config.baseUrl || !config.imageModel) throw new Error("请先填写 API 地址和图像模型");
   const safePrompt = String(prompt || "").trim().slice(0, 1500);
@@ -80,4 +96,4 @@ async function generatePet({ config, apiKey, prompt, outputDirectory }) {
   return pathToFileURL(file).href;
 }
 
-module.exports = { buildSystemPrompt, chat, generatePet };
+module.exports = { buildSystemPrompt, chat, vision, generatePet };
