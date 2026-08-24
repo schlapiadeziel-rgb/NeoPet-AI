@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { pathToFileURL } = require("node:url");
-const { app, BrowserWindow, clipboard, desktopCapturer, dialog, globalShortcut, ipcMain, Menu, nativeImage, shell, Tray } = require("electron");
+const { app, BrowserWindow, clipboard, desktopCapturer, dialog, globalShortcut, ipcMain, Menu, nativeImage, screen, shell, Tray } = require("electron");
 const { ConfigStore } = require("./store");
 const { OtpService } = require("./auth");
 const ai = require("./ai");
@@ -15,6 +15,9 @@ let store;
 let otp;
 let quitting = false;
 let clickThrough = false;
+let compactWindow = false;
+let roamingTimer;
+let roamVelocity = { x: 1.25, y: 0.55 };
 const qaCapturePath = process.env.NEOPET_QA_CAPTURE || "";
 const qaCaptureExpanded = process.env.NEOPET_QA_EXPANDED === "1";
 
@@ -66,6 +69,21 @@ function showWindow() {
   if (!mainWindow) return;
   mainWindow.show();
   mainWindow.focus();
+}
+
+function setRoaming(enabled) {
+  clearInterval(roamingTimer); roamingTimer = null;
+  if (!enabled) return false;
+  roamingTimer = setInterval(() => {
+    if (!mainWindow || mainWindow.isDestroyed() || !mainWindow.isVisible() || !compactWindow) return;
+    const bounds = mainWindow.getBounds();
+    const area = screen.getDisplayMatching(bounds).workArea;
+    let x = bounds.x + roamVelocity.x; let y = bounds.y + roamVelocity.y;
+    if (x <= area.x || x + bounds.width >= area.x + area.width) { roamVelocity.x *= -1; x = Math.max(area.x, Math.min(x, area.x + area.width - bounds.width)); }
+    if (y <= area.y || y + bounds.height >= area.y + area.height) { roamVelocity.y *= -1; y = Math.max(area.y, Math.min(y, area.y + area.height - bounds.height)); }
+    mainWindow.setPosition(Math.round(x), Math.round(y), false);
+  }, 50);
+  return true;
 }
 
 function openMediaCenter() {
@@ -190,9 +208,11 @@ function registerIpc() {
     return { canceled: false, state: store.importData(JSON.parse(fs.readFileSync(result.filePaths[0], "utf8"))) };
   });
   ipcMain.handle("window:set-compact", (_event, compact) => {
+    compactWindow = Boolean(compact);
     mainWindow.setSize(compact ? 320 : 440, compact ? 390 : 720, true);
     return true;
   });
+  ipcMain.handle("window:set-roaming", (_event, enabled) => setRoaming(Boolean(enabled)));
   ipcMain.handle("window:hide", () => { mainWindow.hide(); return true; });
   ipcMain.handle("window:open-media", () => { openMediaCenter(); return true; });
   ipcMain.handle("external:open", (_event, url) => {

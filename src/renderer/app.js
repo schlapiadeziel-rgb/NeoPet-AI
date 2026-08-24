@@ -11,7 +11,7 @@ const elements = {
   closeSettings: $("#closeSettingsButton"), petTitle: $("#petTitle"), accountEmail: $("#accountEmail"), accountStatus: $("#accountStatus"), switchAccount: $("#switchAccountButton"), petPicker: $("#petPicker"), petName: $("#petNameInput"), personality: $("#personalityInput"),
   baseUrl: $("#baseUrlInput"), model: $("#modelInput"), imageModel: $("#imageModelInput"), apiKey: $("#apiKeyInput"),
   apiKeyHint: $("#apiKeyHint"), petPrompt: $("#petPromptInput"), generatePet: $("#generatePetButton"), importAvatar: $("#importAvatarButton"),
-  restoreAvatar: $("#restoreAvatarButton"), modelUrl: $("#modelUrlInput"), modelFile: $("#modelFileInput"), language: $("#languageSelect"), voice: $("#voiceSelect"), speechRate: $("#speechRateInput"), speechRateValue: $("#speechRateValue"), sttProvider: $("#sttProviderSelect"), ttsProvider: $("#ttsProviderSelect"), installRuntime: $("#installRuntimeButton"), ollamaPreset: $("#ollamaPresetButton"), runtimeStatusButton: $("#runtimeStatusButton"), runtimeStatus: $("#runtimeStatus"),
+  restoreAvatar: $("#restoreAvatarButton"), modelUrl: $("#modelUrlInput"), modelFile: $("#modelFileInput"), language: $("#languageSelect"), voice: $("#voiceSelect"), speechRate: $("#speechRateInput"), speechRateValue: $("#speechRateValue"), sttProvider: $("#sttProviderSelect"), ttsProvider: $("#ttsProviderSelect"), wakeWordEnabled: $("#wakeWordEnabled"), wakeWord: $("#wakeWordInput"), roamEnabled: $("#roamEnabled"), installRuntime: $("#installRuntimeButton"), ollamaPreset: $("#ollamaPresetButton"), runtimeStatusButton: $("#runtimeStatusButton"), runtimeStatus: $("#runtimeStatus"),
   relationshipStage: $("#relationshipStage"), relationshipStats: $("#relationshipStats"), bondProgress: $("#bondProgress"), proactiveEnabled: $("#proactiveEnabled"),
   memoryFacts: $("#memoryFacts"), companionDiary: $("#companionDiary"), exportMemory: $("#exportMemoryButton"), importMemory: $("#importMemoryButton"), clearCompanion: $("#clearCompanionButton"),
   todoInput: $("#todoInput"), todoAdd: $("#todoAddButton"), todoList: $("#todoList"), focusMinutes: $("#focusMinutesInput"), focus: $("#focusButton"), focusStatus: $("#focusStatus"), weatherCity: $("#weatherCityInput"), weather: $("#weatherButton"), weatherResult: $("#weatherResult"), launch: $("#launchButton"), translateLanguage: $("#translateLanguageInput"), translate: $("#translateButton"), translateResult: $("#translateResult"), screenQuestion: $("#screenQuestionInput"), screenAsk: $("#screenAskButton"), screenResult: $("#screenResult"),
@@ -24,6 +24,8 @@ let compactMode = true;
 let idleTimer;
 let idleMotionTimer;
 let recognition;
+let wakeRecognition;
+let wakeRestartTimer;
 let mediaRecorder;
 let recordingStream;
 let spriteTimer;
@@ -277,6 +279,9 @@ function populateSettings() {
   elements.chatPetName.textContent = appState.pet.name;
   elements.sttProvider.value = appState.runtime?.sttProvider || "system";
   elements.ttsProvider.value = appState.runtime?.ttsProvider || "system";
+  elements.wakeWordEnabled.checked = Boolean(appState.runtime?.wakeWordEnabled);
+  elements.wakeWord.value = appState.runtime?.wakeWord || "小诺";
+  elements.roamEnabled.checked = Boolean(appState.runtime?.roamEnabled);
   applyBuiltInPet(appState.pet.petId);
   applyVisualMode(localModelObjectUrl);
   renderPetPicker();
@@ -292,10 +297,12 @@ async function saveSettings() {
     appState = await window.neopet.state.save({
       ai: { baseUrl: elements.baseUrl.value, model: elements.model.value, imageModel: elements.imageModel.value, apiKey: elements.apiKey.value },
       pet: { petId: appState.pet.petId, name: elements.petName.value, personality: elements.personality.value, modelUrl: elements.modelUrl.value, renderMode: elements.modelUrl.value ? "3d" : appState.pet.renderMode, language: elements.language.value, voiceName: elements.voice.value, speechRate: elements.speechRate.value },
-      runtime: { sttProvider: elements.sttProvider.value, ttsProvider: elements.ttsProvider.value }
+      runtime: { sttProvider: elements.sttProvider.value, ttsProvider: elements.ttsProvider.value, wakeWordEnabled: elements.wakeWordEnabled.checked, wakeWord: elements.wakeWord.value, roamEnabled: elements.roamEnabled.checked }
     });
     populateSettings();
     setupSpeechRecognition();
+    setupWakeWord();
+    await window.neopet.window.setRoaming(elements.roamEnabled.checked);
     setStatus(elements.settingsStatus, "设置已保存");
     return true;
   } catch (error) {
@@ -382,8 +389,27 @@ function setupSpeechRecognition() {
   recognition.onresult = (event) => {
     elements.messageInput.value = [...event.results].map((item) => item[0].transcript).join("");
   };
-  recognition.onend = () => { elements.mic.classList.remove("listening"); elements.speechBubble.classList.add("hidden"); applyPetState("idle"); };
+  recognition.onend = () => { elements.mic.classList.remove("listening"); elements.speechBubble.classList.add("hidden"); applyPetState("idle"); scheduleWakeRestart(); };
   recognition.onerror = (event) => { elements.mic.classList.remove("listening"); showBubble(`语音识别失败：${event.error}`, 3500); applyPetState("idle"); };
+}
+
+function scheduleWakeRestart() {
+  clearTimeout(wakeRestartTimer);
+  if (appState?.runtime?.wakeWordEnabled && wakeRecognition) wakeRestartTimer = setTimeout(() => { try { wakeRecognition.start(); } catch {} }, 700);
+}
+
+function setupWakeWord() {
+  clearTimeout(wakeRestartTimer);
+  if (wakeRecognition) { wakeRecognition.onend = null; try { wakeRecognition.stop(); } catch {} wakeRecognition = null; }
+  if (!appState?.runtime?.wakeWordEnabled) return;
+  const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!Recognition) { setStatus(elements.settingsStatus, "当前系统不支持唤醒词监听", true); return; }
+  wakeRecognition = new Recognition(); wakeRecognition.continuous = true; wakeRecognition.interimResults = false;
+  wakeRecognition.lang = appState.pet.language !== "auto" ? appState.pet.language : (navigator.language || "zh-CN");
+  wakeRecognition.onresult = (event) => { const phrase = [...event.results].slice(event.resultIndex).map((item) => item[0].transcript).join(""); if (phrase.toLowerCase().includes((appState.runtime.wakeWord || "小诺").toLowerCase())) { try { wakeRecognition.stop(); } catch {} showBubble("我在，正在听你说。", 1800); setTimeout(startListening, 250); } };
+  wakeRecognition.onend = scheduleWakeRestart;
+  wakeRecognition.onerror = (event) => { if (event.error === "not-allowed" || event.error === "service-not-allowed") { appState.runtime.wakeWordEnabled = false; elements.wakeWordEnabled.checked = false; setStatus(elements.settingsStatus, "麦克风权限被拒绝，唤醒词已关闭", true); } };
+  scheduleWakeRestart();
 }
 
 function populateVoices() {
@@ -408,6 +434,8 @@ async function initialize() {
   populateVoices();
   speechSynthesis.onvoiceschanged = populateVoices;
   setupSpeechRecognition();
+  setupWakeWord();
+  await window.neopet.window.setRoaming(Boolean(appState.runtime?.roamEnabled));
   applyPetState("idle", "neutral");
   scheduleIdle();
   if (authenticated) {
@@ -455,6 +483,7 @@ elements.messageInput.addEventListener("keydown", (event) => {
   if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); sendMessage(elements.messageInput.value); }
 });
 function startListening() {
+  if (wakeRecognition) { try { wakeRecognition.stop(); } catch {} }
   if (appState.runtime?.sttProvider === "whisper") { toggleWhisperRecording(); return; }
   if (recognition) recognition.start();
   else {

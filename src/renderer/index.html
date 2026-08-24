@@ -114,6 +114,9 @@
           <label>回复与识别语言</label><select id="languageSelect"><option value="auto">自动识别</option><option value="zh-CN">中文</option><option value="en-US">English</option><option value="ja-JP">日本語</option><option value="ko-KR">한국어</option></select>
           <label>系统声音</label><select id="voiceSelect"><option value="">自动选择</option></select>
           <label>语速 <span id="speechRateValue">1.0</span></label><input id="speechRateInput" type="range" min="0.7" max="1.5" step="0.1" value="1">
+          <label class="toggle-row"><input id="wakeWordEnabled" type="checkbox">启用唤醒词监听（会持续使用麦克风）</label>
+          <label>唤醒词</label><input id="wakeWordInput" maxlength="20" value="小诺">
+          <label class="toggle-row"><input id="roamEnabled" type="checkbox">允许紧凑桌宠在桌面边缘漫游</label>
           <button id="installRuntimeButton" class="primary" type="button">应用内安装离线套件（约 2.4GB）</button>
           <div class="button-row"><button id="ollamaPresetButton" class="secondary" type="button">使用 Ollama + Gemma 3 1B</button><button id="runtimeStatusButton" class="secondary" type="button">检测本地组件</button></div>
           <p id="runtimeStatus" class="hint">尚未检测本地组件</p>

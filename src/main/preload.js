@@ -48,6 +48,7 @@ contextBridge.exposeInMainWorld("neopet", {
   },
   window: {
     setCompact: (compact) => ipcRenderer.invoke("window:set-compact", compact),
+    setRoaming: (enabled) => ipcRenderer.invoke("window:set-roaming", enabled),
     hide: () => ipcRenderer.invoke("window:hide"),
     toggleClickThrough: () => ipcRenderer.invoke("window:toggle-click-through"),
     beginDrag: () => ipcRenderer.invoke("window:begin-drag"),

@@ -25,7 +25,7 @@ const DEFAULTS = {
   },
   memory: [],
   companion: createCompanionState(),
-  runtime: { sttProvider: "system", ttsProvider: "system", whisperExe: "", whisperModel: "", pythonCommand: "python" },
+  runtime: { sttProvider: "system", ttsProvider: "system", whisperExe: "", whisperModel: "", pythonCommand: "python", wakeWordEnabled: false, wakeWord: "小诺", roamEnabled: false },
   care: createCareState(),
   productivity: { todos: [], focusMinutes: 25, reminderMinutes: 60 }
 };
@@ -118,6 +118,9 @@ class ConfigStore {
       ...(typeof runtime.whisperExe === "string" ? { whisperExe: runtime.whisperExe.trim().slice(0, 2000) } : {}),
       ...(typeof runtime.whisperModel === "string" ? { whisperModel: runtime.whisperModel.trim().slice(0, 2000) } : {}),
       ...(typeof runtime.pythonCommand === "string" ? { pythonCommand: runtime.pythonCommand.trim().slice(0, 200) || "python" } : {})
+      ,...(typeof runtime.wakeWordEnabled === "boolean" ? { wakeWordEnabled: runtime.wakeWordEnabled } : {})
+      ,...(typeof runtime.wakeWord === "string" ? { wakeWord: runtime.wakeWord.trim().slice(0, 20) || "小诺" } : {})
+      ,...(typeof runtime.roamEnabled === "boolean" ? { roamEnabled: runtime.roamEnabled } : {})
     };
     this.persist();
     return this.publicState();
