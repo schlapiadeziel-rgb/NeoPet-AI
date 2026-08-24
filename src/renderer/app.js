@@ -7,7 +7,7 @@ const elements = {
   messages: $("#messages"), chatForm: $("#chatForm"), messageInput: $("#messageInput"), mic: $("#micButton"), chatPanel: $("#chatPanel"),
   touch: $("#touchButton"), wave: $("#waveButton"), quickMic: $("#quickMicButton"), compactMic: $("#compactMicButton"), compactChat: $("#compactChatButton"),
   compact: $("#compactButton"), settings: $("#settingsButton"), hide: $("#hideButton"), settingsPanel: $("#settingsPanel"),
-  closeSettings: $("#closeSettingsButton"), petTitle: $("#petTitle"), petPicker: $("#petPicker"), petName: $("#petNameInput"), personality: $("#personalityInput"),
+  closeSettings: $("#closeSettingsButton"), petTitle: $("#petTitle"), accountEmail: $("#accountEmail"), accountStatus: $("#accountStatus"), switchAccount: $("#switchAccountButton"), petPicker: $("#petPicker"), petName: $("#petNameInput"), personality: $("#personalityInput"),
   baseUrl: $("#baseUrlInput"), model: $("#modelInput"), imageModel: $("#imageModelInput"), apiKey: $("#apiKeyInput"),
   apiKeyHint: $("#apiKeyHint"), petPrompt: $("#petPromptInput"), generatePet: $("#generatePetButton"), importAvatar: $("#importAvatarButton"),
   restoreAvatar: $("#restoreAvatarButton"), modelUrl: $("#modelUrlInput"), modelFile: $("#modelFileInput"), language: $("#languageSelect"), voice: $("#voiceSelect"), speechRate: $("#speechRateInput"), speechRateValue: $("#speechRateValue"), sttProvider: $("#sttProviderSelect"), ttsProvider: $("#ttsProviderSelect"), installRuntime: $("#installRuntimeButton"), ollamaPreset: $("#ollamaPresetButton"), runtimeStatusButton: $("#runtimeStatusButton"), runtimeStatus: $("#runtimeStatus"),
@@ -234,6 +234,8 @@ function renderCompanion() {
 }
 
 function populateSettings() {
+  elements.accountEmail.textContent = appState.session?.email || "未登录";
+  elements.accountStatus.textContent = appState.session?.verifiedAt ? `已验证 · ${new Date(appState.session.verifiedAt).toLocaleDateString()}` : "邮箱验证码账户";
   elements.petName.value = appState.pet.name;
   elements.personality.value = appState.pet.personality;
   elements.baseUrl.value = appState.ai.baseUrl;
@@ -610,5 +612,6 @@ elements.logout.addEventListener("click", async () => {
   elements.chatPanel.classList.remove("hidden");
   await window.neopet.window.setCompact(false);
 });
+elements.switchAccount.addEventListener("click", () => elements.logout.click());
 
 initialize().catch((error) => setStatus(elements.authStatus, `启动失败：${error.message}`, true));

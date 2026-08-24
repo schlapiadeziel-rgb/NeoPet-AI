@@ -143,6 +143,8 @@ button { border: 0; cursor: pointer; }
 .memory-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }.memory-row span { min-width: 0; overflow-wrap: anywhere; }
 .memory-row button { flex: 0 0 auto; padding: 4px 7px; border-radius: 7px; color: #ff9baa; background: rgba(255,155,170,.1); font-size: 9px; }
 .full-button { width: 100%; margin-top: 8px; }
+.account-card { padding: 13px; border: 1px solid rgba(67,215,224,.25); border-radius: 15px; background: linear-gradient(135deg, rgba(67,215,224,.08), rgba(128,103,255,.08)); }
+.account-row { display: flex; align-items: center; gap: 10px; }.account-avatar { display: grid; flex: 0 0 38px; height: 38px; place-items: center; border-radius: 50%; color: #151126; background: linear-gradient(135deg, var(--cyan), #a99aff); font-weight: 900; }.account-row strong, .account-row small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.account-row strong { max-width: 270px; font-size: 12px; }.account-row small { margin-top: 3px; color: var(--muted); font-size: 9px; }
 
 @keyframes blink { 0%, 45%, 49%, 100% { transform: scaleY(1); } 47% { transform: scaleY(.08); } }
 @keyframes breathe { 0%,100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-5px) scale(1.015); } }
