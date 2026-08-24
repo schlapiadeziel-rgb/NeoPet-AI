@@ -6,6 +6,7 @@ const { ConfigStore } = require("./store");
 const { OtpService } = require("./auth");
 const ai = require("./ai");
 const { proactiveGreeting } = require("../shared/companion");
+const localRuntime = require("./runtime");
 
 let mainWindow;
 let mediaWindow;
@@ -135,6 +136,18 @@ function registerIpc() {
     });
     store.setAvatar(avatarUrl);
     return avatarUrl;
+  });
+  ipcMain.handle("runtime:status", () => localRuntime.runtimeStatus(store.data.runtime));
+  ipcMain.handle("runtime:install", async () => {
+    const scriptPath = app.isPackaged ? path.join(process.resourcesPath, "app.asar.unpacked", "scripts", "install-local-runtime.ps1") : path.join(__dirname, "../../scripts/install-local-runtime.ps1");
+    await localRuntime.installRuntime(scriptPath);
+    return localRuntime.runtimeStatus(store.data.runtime);
+  });
+  ipcMain.handle("runtime:use-ollama", () => store.saveConfig({ ai: { baseUrl: "http://127.0.0.1:11434/v1", model: "gemma3:1b" } }));
+  ipcMain.handle("runtime:transcribe", (_event, bytes) => localRuntime.transcribe(Buffer.from(bytes), store.data.runtime));
+  ipcMain.handle("runtime:speak", (_event, text) => {
+    const scriptPath = app.isPackaged ? path.join(process.resourcesPath, "app.asar.unpacked", "scripts", "pyttsx3_speak.py") : path.join(__dirname, "../../scripts/pyttsx3_speak.py");
+    return localRuntime.speak(text, { ...store.data.runtime, speechRate: store.data.pet.speechRate }, scriptPath);
   });
   ipcMain.handle("pet:import-avatar", async () => {
     const result = await dialog.showOpenDialog(mainWindow, {

@@ -4,4 +4,6 @@ NeoPet AI is a cross-platform AI desktop pet with a transparent always-on-top wi
 
 Windows and Android are packaged from the same mobile-first pet experience. The Electron project also contains macOS DMG and Linux AppImage targets for later platform-specific verification.
 
+Windows also supports a modular offline runtime: Whisper Tiny STT, Ollama with Gemma 3 1B, and pyttsx3 TTS, with a reserved Kokoro provider boundary.
+
 [完整中文说明](README_CN.md)

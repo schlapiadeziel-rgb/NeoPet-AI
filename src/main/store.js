@@ -23,7 +23,8 @@ const DEFAULTS = {
     speechRate: 1
   },
   memory: [],
-  companion: createCompanionState()
+  companion: createCompanionState(),
+  runtime: { sttProvider: "system", ttsProvider: "system", whisperExe: "", whisperModel: "", pythonCommand: "python" }
 };
 
 class ConfigStore {
@@ -42,7 +43,8 @@ class ConfigStore {
         ai: { ...DEFAULTS.ai, ...saved.ai },
         pet: { ...DEFAULTS.pet, ...saved.pet },
         memory: Array.isArray(saved.memory) ? saved.memory.slice(-30) : [],
-        companion: { ...createCompanionState(), ...(saved.companion || {}), facts: Array.isArray(saved.companion?.facts) ? saved.companion.facts.slice(0, 100) : [], diary: Array.isArray(saved.companion?.diary) ? saved.companion.diary.slice(0, 90) : [] }
+        companion: { ...createCompanionState(), ...(saved.companion || {}), facts: Array.isArray(saved.companion?.facts) ? saved.companion.facts.slice(0, 100) : [], diary: Array.isArray(saved.companion?.diary) ? saved.companion.diary.slice(0, 90) : [] },
+        runtime: { ...DEFAULTS.runtime, ...(saved.runtime || {}) }
       };
     } catch {
       this.persist();
@@ -65,11 +67,12 @@ class ConfigStore {
       },
       pet: this.data.pet,
       memory: this.data.memory,
-      companion: this.data.companion
+      companion: this.data.companion,
+      runtime: this.data.runtime
     };
   }
 
-  saveConfig({ ai = {}, pet = {} }) {
+  saveConfig({ ai = {}, pet = {}, runtime = {} }) {
     const nextAi = { ...this.data.ai };
     if (typeof ai.baseUrl === "string") nextAi.baseUrl = ai.baseUrl.trim().replace(/\/$/, "");
     if (typeof ai.model === "string") nextAi.model = ai.model.trim();
@@ -90,6 +93,14 @@ class ConfigStore {
       ...(typeof pet.voiceName === "string" ? { voiceName: pet.voiceName } : {}),
       ...(typeof pet.language === "string" ? { language: pet.language } : {}),
       ...(Number.isFinite(Number(pet.speechRate)) ? { speechRate: Math.min(1.5, Math.max(0.7, Number(pet.speechRate))) } : {})
+    };
+    this.data.runtime = {
+      ...this.data.runtime,
+      ...(runtime.sttProvider === "system" || runtime.sttProvider === "whisper" ? { sttProvider: runtime.sttProvider } : {}),
+      ...(runtime.ttsProvider === "system" || runtime.ttsProvider === "pyttsx3" || runtime.ttsProvider === "kokoro" ? { ttsProvider: runtime.ttsProvider } : {}),
+      ...(typeof runtime.whisperExe === "string" ? { whisperExe: runtime.whisperExe.trim().slice(0, 2000) } : {}),
+      ...(typeof runtime.whisperModel === "string" ? { whisperModel: runtime.whisperModel.trim().slice(0, 2000) } : {}),
+      ...(typeof runtime.pythonCommand === "string" ? { pythonCommand: runtime.pythonCommand.trim().slice(0, 200) || "python" } : {})
     };
     this.persist();
     return this.publicState();

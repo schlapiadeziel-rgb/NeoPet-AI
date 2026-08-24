@@ -1,6 +1,6 @@
 {
   "name": "neopet-ai",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "AI desktop pet with voice, actions, cloud API, and optional local model endpoints",
   "main": "src/main/main.js",
   "license": "MIT",
@@ -31,8 +31,14 @@
     },
     "files": [
       "src/**/*",
+      "scripts/pyttsx3_speak.py",
+      "scripts/install-local-runtime.ps1",
       "package.json",
       "LICENSE"
+    ],
+    "asarUnpack": [
+      "scripts/pyttsx3_speak.py",
+      "scripts/install-local-runtime.ps1"
     ],
     "win": {
       "target": [

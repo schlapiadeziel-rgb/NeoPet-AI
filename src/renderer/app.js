@@ -10,7 +10,7 @@ const elements = {
   closeSettings: $("#closeSettingsButton"), petTitle: $("#petTitle"), petPicker: $("#petPicker"), petName: $("#petNameInput"), personality: $("#personalityInput"),
   baseUrl: $("#baseUrlInput"), model: $("#modelInput"), imageModel: $("#imageModelInput"), apiKey: $("#apiKeyInput"),
   apiKeyHint: $("#apiKeyHint"), petPrompt: $("#petPromptInput"), generatePet: $("#generatePetButton"), importAvatar: $("#importAvatarButton"),
-  restoreAvatar: $("#restoreAvatarButton"), modelUrl: $("#modelUrlInput"), modelFile: $("#modelFileInput"), language: $("#languageSelect"), voice: $("#voiceSelect"), speechRate: $("#speechRateInput"), speechRateValue: $("#speechRateValue"),
+  restoreAvatar: $("#restoreAvatarButton"), modelUrl: $("#modelUrlInput"), modelFile: $("#modelFileInput"), language: $("#languageSelect"), voice: $("#voiceSelect"), speechRate: $("#speechRateInput"), speechRateValue: $("#speechRateValue"), sttProvider: $("#sttProviderSelect"), ttsProvider: $("#ttsProviderSelect"), installRuntime: $("#installRuntimeButton"), ollamaPreset: $("#ollamaPresetButton"), runtimeStatusButton: $("#runtimeStatusButton"), runtimeStatus: $("#runtimeStatus"),
   relationshipStage: $("#relationshipStage"), relationshipStats: $("#relationshipStats"), bondProgress: $("#bondProgress"), proactiveEnabled: $("#proactiveEnabled"),
   memoryFacts: $("#memoryFacts"), companionDiary: $("#companionDiary"), exportMemory: $("#exportMemoryButton"), importMemory: $("#importMemoryButton"), clearCompanion: $("#clearCompanionButton"),
   saveSettings: $("#saveSettingsButton"), mediaCenter: $("#mediaCenterButton"), clearMemory: $("#clearMemoryButton"), logout: $("#logoutButton"), settingsStatus: $("#settingsStatus")
@@ -22,6 +22,8 @@ let compactMode = true;
 let idleTimer;
 let idleMotionTimer;
 let recognition;
+let mediaRecorder;
+let recordingStream;
 let spriteTimer;
 let lookResetTimer;
 let currentPetState = "idle";
@@ -244,6 +246,8 @@ function populateSettings() {
   elements.speechRate.value = appState.pet.speechRate;
   elements.speechRateValue.textContent = Number(appState.pet.speechRate).toFixed(1);
   elements.petTitle.textContent = appState.pet.name;
+  elements.sttProvider.value = appState.runtime?.sttProvider || "system";
+  elements.ttsProvider.value = appState.runtime?.ttsProvider || "system";
   applyBuiltInPet(appState.pet.petId);
   applyVisualMode(localModelObjectUrl);
   renderPetPicker();
@@ -256,7 +260,8 @@ async function saveSettings() {
   try {
     appState = await window.neopet.state.save({
       ai: { baseUrl: elements.baseUrl.value, model: elements.model.value, imageModel: elements.imageModel.value, apiKey: elements.apiKey.value },
-      pet: { petId: appState.pet.petId, name: elements.petName.value, personality: elements.personality.value, modelUrl: elements.modelUrl.value, renderMode: elements.modelUrl.value ? "3d" : appState.pet.renderMode, language: elements.language.value, voiceName: elements.voice.value, speechRate: elements.speechRate.value }
+      pet: { petId: appState.pet.petId, name: elements.petName.value, personality: elements.personality.value, modelUrl: elements.modelUrl.value, renderMode: elements.modelUrl.value ? "3d" : appState.pet.renderMode, language: elements.language.value, voiceName: elements.voice.value, speechRate: elements.speechRate.value },
+      runtime: { sttProvider: elements.sttProvider.value, ttsProvider: elements.ttsProvider.value }
     });
     populateSettings();
     setupSpeechRecognition();
@@ -276,6 +281,21 @@ function speak(text, action, emotion) {
   applyPetState(motion, emotion || "neutral");
   elements.petStage.classList.add("is-talking");
   showBubble(text);
+  const finishSpeaking = () => {
+    elements.petStage.classList.remove("is-talking");
+    elements.speechBubble.classList.add("hidden");
+    applyPetState(action === "sleep" ? "sleep" : "idle", emotion);
+    scheduleIdle();
+  };
+  if (appState.runtime?.ttsProvider === "pyttsx3") {
+    window.neopet.runtime.speak(text).then(finishSpeaking).catch(() => speakWithSystem());
+    return;
+  }
+  if (appState.runtime?.ttsProvider === "kokoro") {
+    showBubble("Kokoro 接口已预留，当前回退到系统朗读。", 2200);
+  }
+  speakWithSystem();
+  function speakWithSystem() {
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.rate = Number(appState.pet.speechRate || 1);
   const voices = speechSynthesis.getVoices();
@@ -285,14 +305,10 @@ function speak(text, action, emotion) {
   utterance.voice = preferred || languageMatch || null;
   if (appState.pet.language && appState.pet.language !== "auto") utterance.lang = appState.pet.language;
   utterance.onstart = () => { applyPetState(motion, emotion); elements.petStage.classList.add("is-talking"); };
-  utterance.onend = () => {
-    elements.petStage.classList.remove("is-talking");
-    elements.speechBubble.classList.add("hidden");
-    applyPetState(action === "sleep" ? "sleep" : "idle", emotion);
-    scheduleIdle();
-  };
+  utterance.onend = finishSpeaking;
   utterance.onerror = () => { elements.petStage.classList.remove("is-talking"); applyPetState("idle", emotion); scheduleIdle(); };
   speechSynthesis.speak(utterance);
+  }
 }
 
 async function sendMessage(text) {
@@ -408,11 +424,30 @@ elements.messageInput.addEventListener("keydown", (event) => {
   if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); sendMessage(elements.messageInput.value); }
 });
 function startListening() {
+  if (appState.runtime?.sttProvider === "whisper") { toggleWhisperRecording(); return; }
   if (recognition) recognition.start();
   else {
     setPetMode(false, true);
     showBubble("当前系统不支持语音识别，请直接输入文字。", 4500);
   }
+}
+async function toggleWhisperRecording() {
+  if (mediaRecorder?.state === "recording") { mediaRecorder.stop(); return; }
+  try {
+    recordingStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const chunks = [];
+    mediaRecorder = new MediaRecorder(recordingStream);
+    mediaRecorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
+    mediaRecorder.onstop = async () => {
+      recordingStream.getTracks().forEach((track) => track.stop());
+      elements.mic.classList.remove("listening"); applyPetState("thinking", "curious"); showBubble("Whisper Tiny 正在识别…");
+      try { const bytes = new Uint8Array(await new Blob(chunks, { type: mediaRecorder.mimeType }).arrayBuffer()); elements.messageInput.value = await window.neopet.runtime.transcribe(bytes); showBubble("识别完成，确认后发送。", 2200); }
+      catch (error) { showBubble(`本地识别失败：${error.message}`, 4500); }
+      applyPetState("idle");
+    };
+    mediaRecorder.start(); elements.mic.classList.add("listening"); applyPetState("listening", "curious"); showBubble("正在离线录音，再点一次结束。", 0);
+    setTimeout(() => { if (mediaRecorder?.state === "recording") mediaRecorder.stop(); }, 20000);
+  } catch (error) { showBubble(`无法录音：${error.message}`, 4000); }
 }
 elements.mic.addEventListener("click", startListening);
 elements.quickMic.addEventListener("click", startListening);
@@ -489,6 +524,15 @@ window.neopet.onOpenChat(() => setPetMode(false, true));
 
 elements.speechRate.addEventListener("input", () => { elements.speechRateValue.textContent = Number(elements.speechRate.value).toFixed(1); });
 elements.saveSettings.addEventListener("click", saveSettings);
+elements.installRuntime.addEventListener("click", async () => {
+  if (!confirm("将从官方来源下载并安装 Ollama、Gemma 3 1B、Whisper Tiny 和 pyttsx3，约需 2.4GB 磁盘空间。继续吗？")) return;
+  elements.installRuntime.disabled = true; elements.runtimeStatus.textContent = "正在应用内下载和安装，首次安装可能需要较长时间…";
+  try { const value = await window.neopet.runtime.install(); elements.runtimeStatus.textContent = `安装完成 · Ollama ${value.ollama ? "可用" : "需启动"} · Gemma ${value.gemma ? "已安装" : "待确认"} · Whisper ${value.whisper ? "可用" : "失败"} · pyttsx3 ${value.pyttsx3 ? "可用" : "失败"}`; }
+  catch (error) { elements.runtimeStatus.textContent = `安装失败：${error.message}`; }
+  finally { elements.installRuntime.disabled = false; }
+});
+elements.ollamaPreset.addEventListener("click", async () => { appState = await window.neopet.runtime.useOllama(); populateSettings(); setStatus(elements.settingsStatus, "已切换到 Ollama + Gemma 3 1B"); });
+elements.runtimeStatusButton.addEventListener("click", async () => { elements.runtimeStatus.textContent = "正在检测…"; const value = await window.neopet.runtime.status(); elements.runtimeStatus.textContent = `Ollama ${value.ollama ? "可用" : "未运行"} · Gemma 3 1B ${value.gemma ? "已安装" : "未安装"} · Whisper Tiny ${value.whisper ? "可用" : "未安装"} · pyttsx3 ${value.pyttsx3 ? "可用" : "未安装"}`; });
 elements.proactiveEnabled.addEventListener("change", async () => { appState = await window.neopet.companion.setProactive(elements.proactiveEnabled.checked); renderCompanion(); });
 elements.exportMemory.addEventListener("click", async () => { const result = await window.neopet.companion.exportData(); setStatus(elements.settingsStatus, result?.canceled ? "已取消备份" : "陪伴数据已备份"); });
 elements.importMemory.addEventListener("click", async () => { const result = await window.neopet.companion.importData(); if (result?.state) { appState = result.state; populateSettings(); setStatus(elements.settingsStatus, "备份已导入"); } });

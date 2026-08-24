@@ -26,6 +26,13 @@ contextBridge.exposeInMainWorld("neopet", {
     exportData: () => ipcRenderer.invoke("companion:export"),
     importData: () => ipcRenderer.invoke("companion:import")
   },
+  runtime: {
+    status: () => ipcRenderer.invoke("runtime:status"),
+    install: () => ipcRenderer.invoke("runtime:install"),
+    useOllama: () => ipcRenderer.invoke("runtime:use-ollama"),
+    transcribe: (bytes) => ipcRenderer.invoke("runtime:transcribe", bytes),
+    speak: (text) => ipcRenderer.invoke("runtime:speak", text)
+  },
   window: {
     setCompact: (compact) => ipcRenderer.invoke("window:set-compact", compact),
     hide: () => ipcRenderer.invoke("window:hide"),
