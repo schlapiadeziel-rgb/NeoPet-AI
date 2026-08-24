@@ -11,9 +11,12 @@ const DEFAULTS = {
     encryptedApiKey: ""
   },
   pet: {
+    petId: "xiaonuo",
     name: "小诺",
     personality: "温暖、活泼、简洁，使用用户正在使用的语言回答。",
     avatarUrl: "",
+    renderMode: "sprite",
+    modelUrl: "",
     voiceName: "",
     language: "auto",
     speechRate: 1
@@ -74,9 +77,12 @@ class ConfigStore {
     this.data.ai = nextAi;
     this.data.pet = {
       ...this.data.pet,
+      ...(typeof pet.petId === "string" && /^[a-z0-9-]{1,40}$/.test(pet.petId) ? { petId: pet.petId } : {}),
       ...(typeof pet.name === "string" ? { name: pet.name.trim().slice(0, 30) || "小诺" } : {}),
       ...(typeof pet.personality === "string" ? { personality: pet.personality.trim().slice(0, 1000) } : {}),
       ...(typeof pet.avatarUrl === "string" ? { avatarUrl: pet.avatarUrl } : {}),
+      ...(pet.renderMode === "sprite" || pet.renderMode === "image" || pet.renderMode === "3d" ? { renderMode: pet.renderMode } : {}),
+      ...(typeof pet.modelUrl === "string" ? { modelUrl: pet.modelUrl.trim().slice(0, 4000) } : {}),
       ...(typeof pet.voiceName === "string" ? { voiceName: pet.voiceName } : {}),
       ...(typeof pet.language === "string" ? { language: pet.language } : {}),
       ...(Number.isFinite(Number(pet.speechRate)) ? { speechRate: Math.min(1.5, Math.max(0.7, Number(pet.speechRate))) } : {})

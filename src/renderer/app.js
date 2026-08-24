@@ -3,14 +3,14 @@ const $ = (selector) => document.querySelector(selector);
 const elements = {
   loginView: $("#loginView"), petView: $("#petView"), email: $("#emailInput"), code: $("#codeInput"), codeArea: $("#codeArea"),
   sendCode: $("#sendCodeButton"), verifyCode: $("#verifyCodeButton"), authStatus: $("#authStatus"), petStage: $("#petStage"),
-  defaultPet: $("#defaultPet"), customPet: $("#customPet"), speechBubble: $("#speechBubble"), petStateLabel: $("#petStateLabel"),
+  defaultPet: $("#defaultPet"), customPet: $("#customPet"), petModel: $("#petModel"), speechBubble: $("#speechBubble"), petStateLabel: $("#petStateLabel"),
   messages: $("#messages"), chatForm: $("#chatForm"), messageInput: $("#messageInput"), mic: $("#micButton"), chatPanel: $("#chatPanel"),
   touch: $("#touchButton"), wave: $("#waveButton"), quickMic: $("#quickMicButton"), compactMic: $("#compactMicButton"), compactChat: $("#compactChatButton"),
   compact: $("#compactButton"), settings: $("#settingsButton"), hide: $("#hideButton"), settingsPanel: $("#settingsPanel"),
-  closeSettings: $("#closeSettingsButton"), petTitle: $("#petTitle"), petName: $("#petNameInput"), personality: $("#personalityInput"),
+  closeSettings: $("#closeSettingsButton"), petTitle: $("#petTitle"), petPicker: $("#petPicker"), petName: $("#petNameInput"), personality: $("#personalityInput"),
   baseUrl: $("#baseUrlInput"), model: $("#modelInput"), imageModel: $("#imageModelInput"), apiKey: $("#apiKeyInput"),
   apiKeyHint: $("#apiKeyHint"), petPrompt: $("#petPromptInput"), generatePet: $("#generatePetButton"), importAvatar: $("#importAvatarButton"),
-  restoreAvatar: $("#restoreAvatarButton"), language: $("#languageSelect"), voice: $("#voiceSelect"), speechRate: $("#speechRateInput"), speechRateValue: $("#speechRateValue"),
+  restoreAvatar: $("#restoreAvatarButton"), modelUrl: $("#modelUrlInput"), modelFile: $("#modelFileInput"), language: $("#languageSelect"), voice: $("#voiceSelect"), speechRate: $("#speechRateInput"), speechRateValue: $("#speechRateValue"),
   saveSettings: $("#saveSettingsButton"), clearMemory: $("#clearMemoryButton"), logout: $("#logoutButton"), settingsStatus: $("#settingsStatus")
 };
 
@@ -23,6 +23,48 @@ let recognition;
 let spriteTimer;
 let lookResetTimer;
 let currentPetState = "idle";
+let localModelObjectUrl = "";
+
+const PETS = [
+  { id: "xiaonuo", name: "小诺", description: "温暖机敏的像素机器人", personality: "温暖、活泼、简洁，使用用户正在使用的语言回答。", pixelated: true },
+  { id: "yuntuan", name: "云团", description: "柔软治愈的3D云朵猫", personality: "温柔、治愈、好奇，善于安慰和倾听，回答自然亲切。" },
+  { id: "yueli", name: "月狸", description: "月光森林里的灵狐伙伴", personality: "安静、灵动、可靠，带一点神秘感，会耐心陪伴并给出清晰回答。" }
+];
+
+function petById(id) {
+  return PETS.find((pet) => pet.id === id) || PETS[0];
+}
+
+function applyBuiltInPet(id) {
+  const pet = petById(id);
+  elements.defaultPet.style.backgroundImage = `url("assets/pets/${pet.id}/spritesheet.webp")`;
+  elements.defaultPet.classList.toggle("smooth-sprite", !pet.pixelated);
+  elements.defaultPet.setAttribute("aria-label", `AI 桌宠${pet.name}`);
+}
+
+function renderPetPicker() {
+  const selectedId = appState?.pet?.petId || "xiaonuo";
+  elements.petPicker.replaceChildren(...PETS.map((pet) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `pet-choice${pet.id === selectedId ? " selected" : ""}`;
+    button.setAttribute("role", "radio");
+    button.setAttribute("aria-checked", String(pet.id === selectedId));
+    button.innerHTML = `<span class="pet-choice-preview${pet.pixelated ? " pixelated" : ""}"></span><strong>${pet.name}</strong><small>${pet.description}</small>`;
+    button.querySelector(".pet-choice-preview").style.backgroundImage = `url("assets/pets/${pet.id}/spritesheet.webp")`;
+    button.addEventListener("click", async () => {
+      elements.petName.value = pet.name;
+      elements.personality.value = pet.personality;
+      appState = await window.neopet.state.save({ pet: { petId: pet.id, avatarUrl: "", modelUrl: "", renderMode: "sprite", name: pet.name, personality: pet.personality } });
+      applyBuiltInPet(pet.id);
+      applyAvatar("");
+      elements.petTitle.textContent = pet.name;
+      renderPetPicker();
+      setStatus(elements.settingsStatus, `已选择${pet.name}`);
+    });
+    return button;
+  }));
+}
 
 const spriteStates = {
   idle: { row: 0, frames: 6, interval: 480 },
@@ -78,6 +120,12 @@ function applyPetState(name = "idle", emotion = "neutral") {
   elements.petStage.dataset.emotion = emotion;
   elements.petStateLabel.textContent = stateLabels[normalized] || "陪伴中";
   animateSprite(normalized);
+  if (!elements.petModel.classList.contains("hidden")) {
+    const names = elements.petModel.availableAnimations || [];
+    const token = normalized === "speaking" ? "talk" : normalized;
+    const match = names.find((item) => item.toLowerCase().includes(token)) || names[0];
+    if (match) { elements.petModel.animationName = match; elements.petModel.play?.(); }
+  }
 }
 
 function scheduleIdle() {
@@ -128,11 +176,21 @@ function showBubble(text, duration = 0) {
   if (duration) setTimeout(() => elements.speechBubble.classList.add("hidden"), duration);
 }
 
-function applyAvatar(url) {
-  const hasCustom = Boolean(url);
+function applyVisualMode(modelSource = "") {
+  const modelUrl = modelSource || appState?.pet?.modelUrl || "";
+  const hasModel = Boolean(modelUrl) && appState?.pet?.renderMode === "3d";
+  const hasCustom = Boolean(appState?.pet?.avatarUrl) && !hasModel;
+  elements.petModel.classList.toggle("hidden", !hasModel);
   elements.customPet.classList.toggle("hidden", !hasCustom);
-  elements.defaultPet.classList.toggle("hidden", hasCustom);
-  if (hasCustom) elements.customPet.src = url;
+  elements.defaultPet.classList.toggle("hidden", hasModel || hasCustom);
+  if (hasModel) elements.petModel.src = modelUrl;
+  if (hasCustom) elements.customPet.src = appState.pet.avatarUrl;
+}
+
+function applyAvatar(url) {
+  appState.pet.avatarUrl = url || "";
+  appState.pet.renderMode = url ? "image" : "sprite";
+  applyVisualMode();
 }
 
 function appendMessage(role, content) {
@@ -149,13 +207,16 @@ function populateSettings() {
   elements.baseUrl.value = appState.ai.baseUrl;
   elements.model.value = appState.ai.model;
   elements.imageModel.value = appState.ai.imageModel;
+  elements.modelUrl.value = appState.pet.modelUrl || "";
   elements.language.value = appState.pet.language || "auto";
   elements.apiKey.value = "";
   elements.apiKeyHint.textContent = appState.ai.hasApiKey ? "设备中已有加密密钥；留空可继续使用。" : "密钥将使用操作系统安全存储加密。";
   elements.speechRate.value = appState.pet.speechRate;
   elements.speechRateValue.textContent = Number(appState.pet.speechRate).toFixed(1);
   elements.petTitle.textContent = appState.pet.name;
-  applyAvatar(appState.pet.avatarUrl);
+  applyBuiltInPet(appState.pet.petId);
+  applyVisualMode(localModelObjectUrl);
+  renderPetPicker();
 }
 
 async function saveSettings() {
@@ -164,7 +225,7 @@ async function saveSettings() {
   try {
     appState = await window.neopet.state.save({
       ai: { baseUrl: elements.baseUrl.value, model: elements.model.value, imageModel: elements.imageModel.value, apiKey: elements.apiKey.value },
-      pet: { name: elements.petName.value, personality: elements.personality.value, language: elements.language.value, voiceName: elements.voice.value, speechRate: elements.speechRate.value }
+      pet: { petId: appState.pet.petId, name: elements.petName.value, personality: elements.personality.value, modelUrl: elements.modelUrl.value, renderMode: elements.modelUrl.value ? "3d" : appState.pet.renderMode, language: elements.language.value, voiceName: elements.voice.value, speechRate: elements.speechRate.value }
     });
     populateSettings();
     setupSpeechRecognition();
@@ -392,9 +453,31 @@ elements.importAvatar.addEventListener("click", async () => {
   const avatar = await window.neopet.pet.importAvatar();
   if (avatar) { appState.pet.avatarUrl = avatar; applyAvatar(avatar); setStatus(elements.settingsStatus, "宠物图片已导入"); }
 });
+elements.modelFile.addEventListener("change", () => {
+  const file = elements.modelFile.files?.[0];
+  if (!file) return;
+  if (file.size > 80_000_000) { setStatus(elements.settingsStatus, "3D 模型不能超过 80MB", true); return; }
+  if (localModelObjectUrl) URL.revokeObjectURL(localModelObjectUrl);
+  localModelObjectUrl = URL.createObjectURL(file);
+  appState.pet.renderMode = "3d";
+  appState.pet.modelUrl = "";
+  appState.pet.avatarUrl = "";
+  elements.modelUrl.value = "";
+  applyVisualMode(localModelObjectUrl);
+  setStatus(elements.settingsStatus, "本地 3D 模型已载入；网址模型可持久保存");
+});
+elements.modelUrl.addEventListener("change", () => {
+  const value = elements.modelUrl.value.trim();
+  if (!value) return;
+  appState.pet.renderMode = "3d";
+  appState.pet.modelUrl = value;
+  appState.pet.avatarUrl = "";
+  applyVisualMode(value);
+});
 elements.restoreAvatar.addEventListener("click", async () => {
-  appState = await window.neopet.state.save({ pet: { avatarUrl: "" } });
-  applyAvatar("");
+  appState = await window.neopet.state.save({ pet: { avatarUrl: "", modelUrl: "", renderMode: "sprite" } });
+  elements.modelUrl.value = "";
+  applyVisualMode();
   setStatus(elements.settingsStatus, "已恢复默认宠物");
 });
 elements.generatePet.addEventListener("click", async () => {

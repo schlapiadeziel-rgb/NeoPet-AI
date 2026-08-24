@@ -5,6 +5,7 @@ const ui = {
   state: $("#stateLabel"),
   pet: $("#defaultPet"),
   custom: $("#customPet"),
+  petModel: $("#petModel"),
   messages: $("#messages"),
   form: $("#chatForm"),
   input: $("#messageInput"),
@@ -15,6 +16,7 @@ const ui = {
   dialog: $("#settingsDialog"),
   install: $("#installButton"),
   overlay: $("#overlayButton"),
+  petPicker: $("#petPicker"),
   name: $("#petName"),
   nameInput: $("#nameInput"),
   personality: $("#personalityInput"),
@@ -23,17 +25,22 @@ const ui = {
   apiKey: $("#apiKeyInput"),
   language: $("#languageInput"),
   avatar: $("#avatarInput"),
+  modelUrl: $("#modelUrlInput"),
+  modelFile: $("#modelFileInput"),
   save: $("#saveSettingsButton"),
   restore: $("#restorePetButton"),
   status: $("#settingsStatus"),
 };
 const defaults = {
+  petId: "xiaonuo",
   name: "小诺",
   personality: "温柔、机灵、简洁，会根据回答选择自然动作。",
   baseUrl: "https://api.openai.com/v1",
   model: "",
   language: "auto",
   avatar: "",
+  renderMode: "sprite",
+  modelUrl: "",
 };
 let config = {
   ...defaults,
@@ -47,6 +54,55 @@ let installPrompt;
 let spriteTimer;
 let lookResetTimer;
 let currentPetState = "idle";
+let localModelObjectUrl = "";
+
+const PETS = [
+  { id: "xiaonuo", name: "小诺", description: "温暖机敏的像素机器人", personality: "温柔、机灵、简洁，会根据回答选择自然动作。", pixelated: true },
+  { id: "yuntuan", name: "云团", description: "柔软治愈的3D云朵猫", personality: "温柔、治愈、好奇，善于安慰和倾听，回答自然亲切。" },
+  { id: "yueli", name: "月狸", description: "月光森林里的灵狐伙伴", personality: "安静、灵动、可靠，带一点神秘感，会耐心陪伴并给出清晰回答。" },
+];
+
+function petById(id) {
+  return PETS.find((pet) => pet.id === id) || PETS[0];
+}
+
+function applyBuiltInPet(id) {
+  const pet = petById(id);
+  ui.pet.style.backgroundImage = `url("assets/pets/${pet.id}/spritesheet.webp")`;
+  ui.pet.classList.toggle("smooth-sprite", !pet.pixelated);
+  ui.pet.setAttribute("aria-label", `触摸桌面宠物${pet.name}`);
+  try { window.NeoPetAndroid?.selectPet?.(pet.id); } catch { }
+}
+
+function applyVisualMode(modelSource = "") {
+  const source = modelSource || config.modelUrl || "";
+  const hasModel = Boolean(source) && config.renderMode === "3d";
+  const hasImage = Boolean(config.avatar) && !hasModel;
+  ui.petModel.classList.toggle("hidden", !hasModel);
+  ui.custom.classList.toggle("hidden", !hasImage);
+  ui.pet.classList.toggle("hidden", hasModel || hasImage);
+  if (hasModel) ui.petModel.src = source;
+  if (hasImage) ui.custom.src = config.avatar;
+}
+
+function renderPetPicker() {
+  ui.petPicker.replaceChildren(...PETS.map((pet) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `pet-choice${pet.id === config.petId ? " selected" : ""}`;
+    button.setAttribute("role", "radio");
+    button.setAttribute("aria-checked", String(pet.id === config.petId));
+    button.innerHTML = `<span class="pet-choice-preview${pet.pixelated ? " pixelated" : ""}"></span><strong>${pet.name}</strong><small>${pet.description}</small>`;
+    button.querySelector(".pet-choice-preview").style.backgroundImage = `url("assets/pets/${pet.id}/spritesheet.webp")`;
+    button.addEventListener("click", () => {
+      config = { ...config, petId: pet.id, name: pet.name, personality: pet.personality, avatar: "", modelUrl: "", renderMode: "sprite" };
+      localStorage.setItem("neopet-mobile-config", JSON.stringify(config));
+      applyConfig();
+      ui.status.textContent = `已选择${pet.name}`;
+    });
+    return button;
+  }));
+}
 
 function renderOverlayState(state = {}) {
   if (!ui.overlay || !state.available) return;
@@ -132,6 +188,12 @@ function setState(action = "idle", emotion = "neutral", label = "") {
   ui.stage.dataset.emotion = emotion;
   ui.state.textContent = label || stateLabels[normalized] || "陪伴中";
   animateSprite(normalized);
+  if (!ui.petModel.classList.contains("hidden")) {
+    const names = ui.petModel.availableAnimations || [];
+    const token = normalized === "speaking" ? "talk" : normalized;
+    const match = names.find((item) => item.toLowerCase().includes(token)) || names[0];
+    if (match) { ui.petModel.animationName = match; ui.petModel.play?.(); }
+  }
 }
 function showBubble(text, duration = 0) {
   ui.bubble.textContent = text;
@@ -250,9 +312,10 @@ function applyConfig() {
   ui.baseUrl.value = config.baseUrl;
   ui.model.value = config.model;
   ui.language.value = config.language;
-  ui.custom.classList.toggle("hidden", !config.avatar);
-  ui.pet.classList.toggle("hidden", Boolean(config.avatar));
-  if (config.avatar) ui.custom.src = config.avatar;
+  ui.modelUrl.value = config.modelUrl || "";
+  applyBuiltInPet(config.petId);
+  applyVisualMode(localModelObjectUrl);
+  renderPetPicker();
 }
 function setupRecognition() {
   const Recognition =
@@ -342,9 +405,28 @@ ui.avatar.addEventListener("change", () => {
   const reader = new FileReader();
   reader.onload = () => {
     config.avatar = reader.result;
+    config.modelUrl = "";
+    config.renderMode = "image";
     applyConfig();
   };
   reader.readAsDataURL(file);
+});
+ui.modelFile.addEventListener("change", () => {
+  const file = ui.modelFile.files?.[0];
+  if (!file) return;
+  if (file.size > 80_000_000) { ui.status.textContent = "3D 模型不能超过 80MB"; return; }
+  if (localModelObjectUrl) URL.revokeObjectURL(localModelObjectUrl);
+  localModelObjectUrl = URL.createObjectURL(file);
+  config = { ...config, avatar: "", modelUrl: "", renderMode: "3d" };
+  applyVisualMode(localModelObjectUrl);
+  ui.status.textContent = "本地 3D 模型已载入";
+});
+ui.modelUrl.addEventListener("change", () => {
+  const value = ui.modelUrl.value.trim();
+  if (!value) return;
+  localModelObjectUrl = "";
+  config = { ...config, avatar: "", modelUrl: value, renderMode: "3d" };
+  applyVisualMode();
 });
 ui.save.addEventListener("click", () => {
   config = {
@@ -354,6 +436,8 @@ ui.save.addEventListener("click", () => {
     baseUrl: ui.baseUrl.value.trim(),
     model: ui.model.value.trim(),
     language: ui.language.value,
+    modelUrl: ui.modelUrl.value.trim(),
+    renderMode: (ui.modelUrl.value.trim() || localModelObjectUrl) ? "3d" : config.renderMode,
   };
   localStorage.setItem("neopet-mobile-config", JSON.stringify(config));
   if (ui.apiKey.value)
@@ -365,6 +449,9 @@ ui.save.addEventListener("click", () => {
 });
 ui.restore.addEventListener("click", () => {
   config.avatar = "";
+  config.modelUrl = "";
+  config.renderMode = "sprite";
+  localModelObjectUrl = "";
   localStorage.setItem("neopet-mobile-config", JSON.stringify(config));
   applyConfig();
   ui.dialog.close();

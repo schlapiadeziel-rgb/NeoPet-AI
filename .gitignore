@@ -7,3 +7,4 @@ pet-runs/
 android/.gradle/
 android/build/
 android/app/build/
+.tools/

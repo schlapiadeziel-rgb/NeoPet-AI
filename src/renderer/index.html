@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' file: data: https:; style-src 'self'; script-src 'self'; media-src 'self' file: data:">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' file: data: blob: https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'wasm-unsafe-eval'; media-src 'self' file: data: blob: https:; connect-src 'self' file: data: blob: https:">
   <title>NeoPet AI</title>
   <link rel="stylesheet" href="style.css">
 </head>
@@ -40,6 +40,7 @@
       <div id="speechBubble" class="speech-bubble hidden"></div>
       <div id="defaultPet" class="pet-art sprite-pet" role="button" tabindex="0" aria-label="AI 桌宠小诺"></div>
       <img id="customPet" class="custom-pet hidden" alt="自定义 AI 桌宠">
+      <model-viewer id="petModel" class="pet-model hidden" camera-controls autoplay interaction-prompt="none" shadow-intensity="0" alt="3D AI 桌宠"></model-viewer>
       <p id="petStateLabel" class="pet-state-label">空闲</p>
     </section>
 
@@ -70,9 +71,13 @@
       <div class="settings-scroll">
         <section class="setting-group">
           <h3>角色</h3>
+          <div id="petPicker" class="pet-picker" role="radiogroup" aria-label="选择宠物"></div>
           <label>名字</label><input id="petNameInput" maxlength="30">
           <label>性格和说话方式</label><textarea id="personalityInput" rows="3"></textarea>
           <div class="button-row"><button id="importAvatarButton" class="secondary" type="button">导入图片</button><button id="restoreAvatarButton" class="secondary" type="button">恢复默认</button></div>
+          <label>3D 模型网址（GLB/GLTF）</label><input id="modelUrlInput" type="url" placeholder="https://example.com/pet.glb">
+          <label class="file-button">导入本地 3D 模型<input id="modelFileInput" type="file" accept=".glb,.gltf,model/gltf-binary,model/gltf+json"></label>
+          <p class="hint">真 3D 支持触摸旋转和模型自带动画；悬浮窗自动使用省电动作图。</p>
         </section>
         <section class="setting-group">
           <h3>AI 接口</h3>
@@ -102,6 +107,7 @@
       </div>
     </aside>
   </main>
+  <script src="vendor/model-viewer.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

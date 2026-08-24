@@ -38,6 +38,8 @@ public class OverlayPetService extends Service {
     private WindowManager windowManager;
     private WindowManager.LayoutParams layoutParams;
     private PetOverlayView petView;
+    private String selectedPetId = "xiaonuo";
+    private String selectedPetName = "小诺";
 
     public static boolean isRunning() {
         return running;
@@ -45,6 +47,9 @@ public class OverlayPetService extends Service {
 
     @Override public void onCreate() {
         super.onCreate();
+        selectedPetId = getSharedPreferences("neopet", MODE_PRIVATE).getString("pet_id", "xiaonuo");
+        if (selectedPetId == null || !selectedPetId.matches("[a-z0-9-]{1,40}")) selectedPetId = "xiaonuo";
+        selectedPetName = displayName(selectedPetId);
         createNotificationChannel();
         Notification notification = buildNotification();
         if (Build.VERSION.SDK_INT >= 34) {
@@ -94,7 +99,7 @@ public class OverlayPetService extends Service {
             : new Notification.Builder(this);
         return builder
             .setSmallIcon(R.drawable.ic_pet_notification)
-            .setContentTitle("小诺正在陪伴你")
+            .setContentTitle(selectedPetName + "正在陪伴你")
             .setContentText("点击打开聊天；拖动小诺可以移动位置")
             .setContentIntent(openPending)
             .setOngoing(true)
@@ -105,7 +110,7 @@ public class OverlayPetService extends Service {
 
     private void showOverlay() {
         Bitmap atlas;
-        try (InputStream input = getAssets().open("assets/pets/xiaonuo/spritesheet.webp")) {
+        try (InputStream input = getAssets().open("assets/pets/" + selectedPetId + "/spritesheet.webp")) {
             atlas = BitmapFactory.decodeStream(input);
         } catch (IOException error) {
             stopSelf();
@@ -149,6 +154,12 @@ public class OverlayPetService extends Service {
             }
         });
         windowManager.addView(petView, layoutParams);
+    }
+
+    private String displayName(String petId) {
+        if ("yuntuan".equals(petId)) return "云团";
+        if ("yueli".equals(petId)) return "月狸";
+        return "小诺";
     }
 
     private void openApp(boolean startVoice) {

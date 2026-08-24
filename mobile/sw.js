@@ -1,4 +1,4 @@
-const CACHE = "neopet-mobile-v5";
+const CACHE = "neopet-mobile-v8";
 const ASSETS = [
   "./",
   "index.html",
@@ -7,6 +7,9 @@ const ASSETS = [
   "manifest.webmanifest",
   "icon.svg",
   "assets/pets/xiaonuo/spritesheet.webp",
+  "assets/pets/yuntuan/spritesheet.webp",
+  "assets/pets/yueli/spritesheet.webp",
+  "vendor/model-viewer.min.js",
 ];
 self.addEventListener("install", (event) =>
   event.waitUntil(

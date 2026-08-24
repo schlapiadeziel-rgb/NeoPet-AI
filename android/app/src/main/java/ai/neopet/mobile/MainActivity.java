@@ -86,6 +86,15 @@ public class MainActivity extends Activity {
             return OverlayPetService.isRunning();
         }
 
+        @JavascriptInterface public void selectPet(String petId) {
+            if (!isKnownPet(petId)) return;
+            getSharedPreferences("neopet", MODE_PRIVATE).edit().putString("pet_id", petId).apply();
+            if (OverlayPetService.isRunning()) {
+                stopService(new Intent(MainActivity.this, OverlayPetService.class));
+                webView.postDelayed(MainActivity.this::startOverlayService, 180);
+            }
+        }
+
         @JavascriptInterface public void enableOverlay() {
             runOnUiThread(() -> requestOverlayFlow());
         }
@@ -96,6 +105,10 @@ public class MainActivity extends Activity {
                 notifyOverlayState();
             });
         }
+    }
+
+    private boolean isKnownPet(String petId) {
+        return "xiaonuo".equals(petId) || "yuntuan".equals(petId) || "yueli".equals(petId);
     }
 
     private void requestOverlayFlow() {
