@@ -37,6 +37,8 @@
         class="pet-stage state-idle"
         data-emotion="neutral"
       >
+        <div class="scene-orb orb-one"></div><div class="scene-orb orb-two"></div>
+        <div class="companion-summary"><span id="mobileHomeStage">初识</span><span id="mobileHomeMood">平静</span><span id="mobileHomeMemories">0 条记忆</span></div>
         <div id="speechBubble" class="bubble hidden"></div>
         <div
           id="defaultPet"
@@ -57,6 +59,7 @@
       </section>
 
       <section class="chat-card">
+        <header class="chat-heading"><div><strong>和 <span id="mobileChatPetName">小诺</span> 聊天</strong><small>会记住重要的事，也会用动作回应你</small></div><span>本地记忆</span></header>
         <div id="messages" class="messages" aria-live="polite">
           <div class="message pet-message">
             你好，我会听、会说，也会根据回答做动作。

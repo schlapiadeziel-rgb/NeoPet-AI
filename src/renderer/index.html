@@ -14,6 +14,7 @@
       <p class="eyebrow">NEOPET AI</p>
       <h1>唤醒你的 AI 桌宠</h1>
       <p class="muted">使用邮箱验证码进入，让桌宠记住你们的对话和设定。</p>
+      <div class="auth-features"><span>长期记忆</span><span>语音互动</span><span>自由模型</span></div>
       <label>邮箱</label>
       <input id="emailInput" type="email" autocomplete="email" placeholder="name@example.com">
       <button id="sendCodeButton" class="primary">发送验证码</button>
@@ -28,7 +29,7 @@
 
   <main id="petView" class="screen pet-screen hidden">
     <header class="titlebar glass">
-      <div class="drag-region"><span class="online-dot"></span><strong id="petTitle">小诺</strong></div>
+      <div class="drag-region"><span class="online-dot"></span><div><strong id="petTitle">小诺</strong><small>你的 AI 陪伴伙伴</small></div></div>
       <nav class="window-actions">
         <button id="compactButton" class="icon-button" title="只显示桌宠">◌</button>
         <button id="settingsButton" class="icon-button" title="设置">⚙</button>
@@ -37,6 +38,8 @@
     </header>
 
     <section id="petStage" class="pet-stage state-idle" data-emotion="neutral">
+      <div class="scene-orb orb-one"></div><div class="scene-orb orb-two"></div>
+      <div class="home-status"><span id="homeRelationshipStage">初识</span><span id="homeMood">平静</span><span id="homeMemoryCount">0 条记忆</span></div>
       <div id="speechBubble" class="speech-bubble hidden"></div>
       <div id="defaultPet" class="pet-art sprite-pet" role="button" tabindex="0" aria-label="AI 桌宠小诺"></div>
       <img id="customPet" class="custom-pet hidden" alt="自定义 AI 桌宠">
@@ -56,6 +59,7 @@
     </section>
 
     <section id="chatPanel" class="glass chat-panel hidden">
+      <header class="chat-heading"><div><strong>和 <span id="chatPetName">小诺</span> 聊天</strong><small>会记住重要的事，也会用动作回应你</small></div><span class="privacy-chip">本地记忆</span></header>
       <div id="messages" class="messages" aria-live="polite">
         <div class="message pet-message">你好，我会听、会说，也会根据回答做动作。</div>
       </div>

@@ -3,6 +3,7 @@ const ui = {
   stage: $("#petStage"),
   bubble: $("#speechBubble"),
   state: $("#stateLabel"),
+  homeStage: $("#mobileHomeStage"), homeMood: $("#mobileHomeMood"), homeMemories: $("#mobileHomeMemories"), chatPetName: $("#mobileChatPetName"),
   pet: $("#defaultPet"),
   custom: $("#customPet"),
   petModel: $("#petModel"),
@@ -80,6 +81,7 @@ function advanceCompanion(userText, reply, emotion) {
 }
 function memoryContext() { return companion.facts.length ? `你长期记得用户这些信息：${companion.facts.slice(-12).map((item) => item.text).join("；")}。当前关系：${companion.stage}，信任${companion.trust}。` : `当前关系：${companion.stage}，信任${companion.trust}。`; }
 function renderCompanion() {
+  ui.homeStage.textContent = companion.stage; ui.homeMood.textContent = companion.mood; ui.homeMemories.textContent = `${companion.facts.length} 条记忆`;
   ui.relationshipStage.textContent = companion.stage; ui.relationshipStats.textContent = `信任 ${companion.trust} · 连续 ${companion.streakDays} 天 · ${companion.mood}`; ui.bondProgress.style.width = `${Math.min(100, companion.xp % 100)}%`; ui.proactive.checked = companion.proactiveEnabled !== false;
   ui.facts.replaceChildren(...(companion.facts.length ? companion.facts.slice().reverse().map((fact) => { const row = document.createElement("div"); row.className = "memory-row"; const span = document.createElement("span"); span.textContent = fact.text; const button = document.createElement("button"); button.type = "button"; button.textContent = "忘记"; button.onclick = () => { companion.facts = companion.facts.filter((item) => item.id !== fact.id); saveCompanion(); renderCompanion(); }; row.append(span, button); return row; }) : [Object.assign(document.createElement("p"), { className: "hint", textContent: "还没有长期记忆" })]));
   ui.diary.replaceChildren(...(companion.diary.length ? companion.diary.slice(-5).reverse().map((entry) => Object.assign(document.createElement("div"), { className: "diary-row", textContent: `${new Date(entry.at).toLocaleDateString()} · ${entry.text}` })) : [Object.assign(document.createElement("p"), { className: "hint", textContent: "日记会随着相处逐渐出现" })]));
@@ -337,6 +339,7 @@ async function sendMessage(text) {
 }
 function applyConfig() {
   ui.name.textContent = config.name;
+  ui.chatPetName.textContent = config.name;
   ui.nameInput.value = config.name;
   ui.personality.value = config.personality;
   ui.baseUrl.value = config.baseUrl;

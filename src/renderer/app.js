@@ -3,7 +3,7 @@ const $ = (selector) => document.querySelector(selector);
 const elements = {
   loginView: $("#loginView"), petView: $("#petView"), email: $("#emailInput"), code: $("#codeInput"), codeArea: $("#codeArea"),
   sendCode: $("#sendCodeButton"), verifyCode: $("#verifyCodeButton"), authStatus: $("#authStatus"), petStage: $("#petStage"),
-  defaultPet: $("#defaultPet"), customPet: $("#customPet"), petModel: $("#petModel"), speechBubble: $("#speechBubble"), petStateLabel: $("#petStateLabel"),
+  defaultPet: $("#defaultPet"), customPet: $("#customPet"), petModel: $("#petModel"), speechBubble: $("#speechBubble"), petStateLabel: $("#petStateLabel"), homeRelationshipStage: $("#homeRelationshipStage"), homeMood: $("#homeMood"), homeMemoryCount: $("#homeMemoryCount"), chatPetName: $("#chatPetName"),
   messages: $("#messages"), chatForm: $("#chatForm"), messageInput: $("#messageInput"), mic: $("#micButton"), chatPanel: $("#chatPanel"),
   touch: $("#touchButton"), wave: $("#waveButton"), quickMic: $("#quickMicButton"), compactMic: $("#compactMicButton"), compactChat: $("#compactChatButton"),
   compact: $("#compactButton"), settings: $("#settingsButton"), hide: $("#hideButton"), settingsPanel: $("#settingsPanel"),
@@ -211,6 +211,9 @@ function renderCompanion() {
   elements.relationshipStats.textContent = `信任 ${companion.trust || 0} · 连续 ${companion.streakDays || 0} 天 · ${companion.mood || "平静"}`;
   elements.bondProgress.style.width = `${Math.min(100, Number(companion.xp || 0) % 100)}%`;
   elements.proactiveEnabled.checked = companion.proactiveEnabled !== false;
+  elements.homeRelationshipStage.textContent = companion.stage || "初识";
+  elements.homeMood.textContent = companion.mood || "平静";
+  elements.homeMemoryCount.textContent = `${companion.facts?.length || 0} 条记忆`;
   const facts = Array.isArray(companion.facts) ? companion.facts : [];
   elements.memoryFacts.replaceChildren(...(facts.length ? facts.slice().reverse().map((fact) => {
     const row = document.createElement("div");
@@ -248,6 +251,7 @@ function populateSettings() {
   elements.speechRate.value = appState.pet.speechRate;
   elements.speechRateValue.textContent = Number(appState.pet.speechRate).toFixed(1);
   elements.petTitle.textContent = appState.pet.name;
+  elements.chatPetName.textContent = appState.pet.name;
   elements.sttProvider.value = appState.runtime?.sttProvider || "system";
   elements.ttsProvider.value = appState.runtime?.ttsProvider || "system";
   applyBuiltInPet(appState.pet.petId);

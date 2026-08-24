@@ -1,4 +1,4 @@
-const CACHE = "neopet-mobile-v10";
+const CACHE = "neopet-mobile-v11";
 const ASSETS = [
   "./",
   "index.html",
@@ -6,6 +6,7 @@ const ASSETS = [
   "app.js",
   "media.html",
   "media.css",
+  "media-v2.css",
   "media.js",
   "manifest.webmanifest",
   "icon.svg",

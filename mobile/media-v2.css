@@ -1,0 +1,17 @@
+/* NeoPet 0.5 unified studio surface */
+body{min-height:100vh;background:radial-gradient(circle at 10% 0,rgba(88,219,211,.16),transparent 28%),radial-gradient(circle at 92% 15%,rgba(128,103,255,.24),transparent 34%),#090711}
+main{max-width:1240px;padding:32px}
+header{padding:0 4px 12px;border-bottom:1px solid #ffffff12;align-items:center}
+header p{color:#58dbd3;font-size:10px}
+header span{padding:7px 11px;border:1px solid #ffffff17;border-radius:99px;color:#d7d2e8;background:#ffffff08;font-size:11px}
+.grid{gap:20px;margin-top:20px}
+article,aside section{border-color:#ffffff1c;background:linear-gradient(155deg,rgba(31,26,49,.95),rgba(15,13,26,.94));box-shadow:inset 0 1px #ffffff0d,0 22px 70px #0007}
+#videoStage{border:1px solid #ffffff12;background:radial-gradient(circle,#161124,#05040a 72%)}
+textarea,input,select{background:#090711aa}
+button,.file{border-color:#8d76ff66;background:linear-gradient(135deg,#8067ff,#5e46d5);box-shadow:0 8px 20px #5d43ca33}
+button:hover,.file:hover{filter:brightness(1.08)}
+aside h2{font-size:16px}
+aside h2::before{content:"";display:inline-block;width:4px;height:16px;margin-right:8px;border-radius:4px;background:linear-gradient(#58dbd3,#8067ff);vertical-align:-2px}
+#camera{border:1px solid #ffffff12}.status{padding:0 4px;color:#b8f1ed}
+@media(max-width:800px){main{padding:18px 14px}h1{font-size:27px}.grid{margin-top:14px}article,aside section{border-radius:18px;padding:14px}}
+
