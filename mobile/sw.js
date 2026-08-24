@@ -1,9 +1,12 @@
-const CACHE = "neopet-mobile-v8";
+const CACHE = "neopet-mobile-v9";
 const ASSETS = [
   "./",
   "index.html",
   "style.css",
   "app.js",
+  "media.html",
+  "media.css",
+  "media.js",
   "manifest.webmanifest",
   "icon.svg",
   "assets/pets/xiaonuo/spritesheet.webp",

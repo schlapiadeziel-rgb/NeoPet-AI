@@ -23,7 +23,9 @@ contextBridge.exposeInMainWorld("neopet", {
     hide: () => ipcRenderer.invoke("window:hide"),
     toggleClickThrough: () => ipcRenderer.invoke("window:toggle-click-through"),
     beginDrag: () => ipcRenderer.invoke("window:begin-drag"),
-    moveTo: (x, y) => ipcRenderer.send("window:move-to", { x, y })
+    moveTo: (x, y) => ipcRenderer.send("window:move-to", { x, y }),
+    openMedia: () => ipcRenderer.invoke("window:open-media")
   },
+  external: { open: (url) => ipcRenderer.invoke("external:open", url) },
   onOpenChat: (callback) => ipcRenderer.on("window:open-chat", callback)
 });

@@ -36,6 +36,8 @@ select {
 .hidden {
   display: none !important;
 }
+
+.media-link { display: block; text-align: center; text-decoration: none; }
 .app-shell {
   width: min(100%, 720px);
   min-height: 100dvh;

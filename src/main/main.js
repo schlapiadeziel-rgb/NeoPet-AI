@@ -1,12 +1,13 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { pathToFileURL } = require("node:url");
-const { app, BrowserWindow, dialog, globalShortcut, ipcMain, Menu, nativeImage, Tray } = require("electron");
+const { app, BrowserWindow, dialog, globalShortcut, ipcMain, Menu, nativeImage, shell, Tray } = require("electron");
 const { ConfigStore } = require("./store");
 const { OtpService } = require("./auth");
 const ai = require("./ai");
 
 let mainWindow;
+let mediaWindow;
 let tray;
 let store;
 let otp;
@@ -63,6 +64,21 @@ function showWindow() {
   if (!mainWindow) return;
   mainWindow.show();
   mainWindow.focus();
+}
+
+function openMediaCenter() {
+  if (mediaWindow && !mediaWindow.isDestroyed()) { mediaWindow.show(); mediaWindow.focus(); return; }
+  mediaWindow = new BrowserWindow({
+    width: 980,
+    height: 760,
+    minWidth: 720,
+    minHeight: 560,
+    backgroundColor: "#0d0a18",
+    title: "NeoPet AI 视频中心",
+    webPreferences: { preload: path.join(__dirname, "preload.js"), contextIsolation: true, nodeIntegration: false, sandbox: true }
+  });
+  mediaWindow.loadFile(path.join(__dirname, "../renderer/media.html"));
+  mediaWindow.on("closed", () => { mediaWindow = null; });
 }
 
 function createTray() {
@@ -138,6 +154,12 @@ function registerIpc() {
     return true;
   });
   ipcMain.handle("window:hide", () => { mainWindow.hide(); return true; });
+  ipcMain.handle("window:open-media", () => { openMediaCenter(); return true; });
+  ipcMain.handle("external:open", (_event, url) => {
+    const parsed = new URL(String(url));
+    if (parsed.protocol !== "https:") throw new Error("只允许打开 HTTPS 地址");
+    return shell.openExternal(parsed.href);
+  });
   ipcMain.handle("window:begin-drag", () => mainWindow.getPosition());
   ipcMain.on("window:move-to", (_event, { x, y }) => {
     if (Number.isFinite(x) && Number.isFinite(y)) mainWindow.setPosition(Math.round(x), Math.round(y));

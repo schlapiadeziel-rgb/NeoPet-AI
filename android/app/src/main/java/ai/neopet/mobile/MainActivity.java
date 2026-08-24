@@ -18,11 +18,11 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
 public class MainActivity extends Activity {
-    private static final int AUDIO_PERMISSION_REQUEST = 41;
+    private static final int MEDIA_PERMISSION_REQUEST = 41;
     private static final int FILE_CHOOSER_REQUEST = 42;
     private static final int NOTIFICATION_PERMISSION_REQUEST = 43;
     private WebView webView;
-    private PermissionRequest pendingAudioRequest;
+    private PermissionRequest pendingMediaRequest;
     private ValueCallback<Uri[]> pendingFileCallback;
     private boolean pendingOverlayStart;
     private boolean pendingStartVoice;
@@ -158,22 +158,32 @@ public class MainActivity extends Activity {
 
     private void handleWebPermission(PermissionRequest request) {
         boolean wantsAudio = false;
-        for (String resource : request.getResources()) if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(resource)) wantsAudio = true;
-        if (!wantsAudio) { request.deny(); return; }
-        if (Build.VERSION.SDK_INT < 23 || checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
-            request.grant(new String[]{PermissionRequest.RESOURCE_AUDIO_CAPTURE});
+        boolean wantsVideo = false;
+        for (String resource : request.getResources()) {
+            if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(resource)) wantsAudio = true;
+            if (PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(resource)) wantsVideo = true;
+        }
+        if (!wantsAudio && !wantsVideo) { request.deny(); return; }
+        boolean audioGranted = !wantsAudio || Build.VERSION.SDK_INT < 23 || checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED;
+        boolean videoGranted = !wantsVideo || Build.VERSION.SDK_INT < 23 || checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED;
+        if (audioGranted && videoGranted) {
+            request.grant(request.getResources());
         } else {
-            pendingAudioRequest = request;
-            requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, AUDIO_PERMISSION_REQUEST);
+            pendingMediaRequest = request;
+            java.util.ArrayList<String> permissions = new java.util.ArrayList<>();
+            if (wantsAudio && !audioGranted) permissions.add(Manifest.permission.RECORD_AUDIO);
+            if (wantsVideo && !videoGranted) permissions.add(Manifest.permission.CAMERA);
+            requestPermissions(permissions.toArray(new String[0]), MEDIA_PERMISSION_REQUEST);
         }
     }
 
     @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
         super.onRequestPermissionsResult(requestCode, permissions, results);
-        if (requestCode == AUDIO_PERMISSION_REQUEST && pendingAudioRequest != null) {
-            if (results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED) pendingAudioRequest.grant(new String[]{PermissionRequest.RESOURCE_AUDIO_CAPTURE});
-            else pendingAudioRequest.deny();
-            pendingAudioRequest = null;
+        if (requestCode == MEDIA_PERMISSION_REQUEST && pendingMediaRequest != null) {
+            boolean granted = results.length > 0;
+            for (int result : results) if (result != PackageManager.PERMISSION_GRANTED) granted = false;
+            if (granted) pendingMediaRequest.grant(pendingMediaRequest.getResources()); else pendingMediaRequest.deny();
+            pendingMediaRequest = null;
         } else if (requestCode == NOTIFICATION_PERMISSION_REQUEST && pendingOverlayStart) {
             startOverlayService();
         }

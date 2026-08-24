@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' https:">
+<title>NeoPet AI 视频中心</title><link rel="stylesheet" href="media.css"></head>
+<body><main><header><div><p>NEOPET AI</p><h1>视频中心</h1></div><span>弹幕 · 翻译 · 视频通话</span></header>
+<section class="grid"><article class="preview-card"><div id="videoStage"><video id="video" controls playsinline></video><div id="danmakuLayer"></div></div>
+<label class="file">选择本地视频<input id="videoFile" type="file" accept="video/*"></label>
+<div class="row"><input id="danmakuText" maxlength="80" placeholder="输入弹幕文字"><button id="addDanmaku">在当前时间添加</button></div>
+<textarea id="sourceText" rows="8" placeholder="粘贴字幕、台词或转写文本；支持普通文本和 VTT"></textarea>
+<div class="row"><select id="targetLanguage"><option>中文</option><option>English</option><option>日本語</option><option>한국어</option><option>Español</option><option>Français</option></select><button id="translate">AI 翻译</button><button id="generateDanmaku">AI 生成弹幕</button></div></article>
+<aside><section><h2>翻译结果</h2><textarea id="translatedText" rows="12" placeholder="翻译结果会保留时间码"></textarea><button id="downloadVtt">下载字幕</button></section>
+<section><h2>视频通话</h2><p>先检查摄像头和麦克风，再创建加密会议链接分享给对方。</p><video id="camera" muted autoplay playsinline></video><div class="row"><button id="testCamera">测试设备</button><button id="createCall">创建通话</button></div><input id="meetingLink" readonly placeholder="会议链接"><button id="copyLink">复制链接</button></section>
+<p id="status" class="status"></p></aside></section></main><script src="media.js"></script></body></html>

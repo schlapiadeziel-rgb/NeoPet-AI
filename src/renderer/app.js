@@ -11,7 +11,7 @@ const elements = {
   baseUrl: $("#baseUrlInput"), model: $("#modelInput"), imageModel: $("#imageModelInput"), apiKey: $("#apiKeyInput"),
   apiKeyHint: $("#apiKeyHint"), petPrompt: $("#petPromptInput"), generatePet: $("#generatePetButton"), importAvatar: $("#importAvatarButton"),
   restoreAvatar: $("#restoreAvatarButton"), modelUrl: $("#modelUrlInput"), modelFile: $("#modelFileInput"), language: $("#languageSelect"), voice: $("#voiceSelect"), speechRate: $("#speechRateInput"), speechRateValue: $("#speechRateValue"),
-  saveSettings: $("#saveSettingsButton"), clearMemory: $("#clearMemoryButton"), logout: $("#logoutButton"), settingsStatus: $("#settingsStatus")
+  saveSettings: $("#saveSettingsButton"), mediaCenter: $("#mediaCenterButton"), clearMemory: $("#clearMemoryButton"), logout: $("#logoutButton"), settingsStatus: $("#settingsStatus")
 };
 
 let appState;
@@ -449,6 +449,7 @@ window.neopet.onOpenChat(() => setPetMode(false, true));
 
 elements.speechRate.addEventListener("input", () => { elements.speechRateValue.textContent = Number(elements.speechRate.value).toFixed(1); });
 elements.saveSettings.addEventListener("click", saveSettings);
+elements.mediaCenter.addEventListener("click", () => window.neopet.window.openMedia());
 elements.importAvatar.addEventListener("click", async () => {
   const avatar = await window.neopet.pet.importAvatar();
   if (avatar) { appState.pet.avatarUrl = avatar; applyAvatar(avatar); setStatus(elements.settingsStatus, "宠物图片已导入"); }
