@@ -56,5 +56,12 @@ contextBridge.exposeInMainWorld("neopet", {
     openMedia: () => ipcRenderer.invoke("window:open-media")
   },
   external: { open: (url) => ipcRenderer.invoke("external:open", url) },
+  update: {
+    version: () => ipcRenderer.invoke("update:version"),
+    check: () => ipcRenderer.invoke("update:check"),
+    download: () => ipcRenderer.invoke("update:download"),
+    install: () => ipcRenderer.invoke("update:install"),
+    onStatus: (callback) => ipcRenderer.on("update:status", (_event, value) => callback(value))
+  },
   onOpenChat: (callback) => ipcRenderer.on("window:open-chat", callback)
 });

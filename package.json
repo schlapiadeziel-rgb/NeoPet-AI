@@ -1,6 +1,6 @@
 {
   "name": "neopet-ai",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "description": "AI desktop pet with voice, actions, cloud API, and optional local model endpoints",
   "main": "src/main/main.js",
   "license": "MIT",
@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@google/model-viewer": "^4.1.0",
+    "electron-updater": "^6.8.9",
     "nodemailer": "^9.0.5"
   },
   "devDependencies": {
@@ -39,6 +40,13 @@
     "asarUnpack": [
       "scripts/pyttsx3_speak.py",
       "scripts/install-local-runtime.ps1"
+    ],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "schlapiadeziel-rgb",
+        "repo": "NeoPet-AI"
+      }
     ],
     "win": {
       "target": [

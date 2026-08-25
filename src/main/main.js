@@ -7,6 +7,7 @@ const { OtpService } = require("./auth");
 const ai = require("./ai");
 const { proactiveGreeting } = require("../shared/companion");
 const localRuntime = require("./runtime");
+const { autoUpdater } = require("electron-updater");
 
 let mainWindow;
 let mediaWindow;
@@ -71,6 +72,21 @@ function showWindow() {
   mainWindow.focus();
 }
 
+function sendUpdateStatus(status, detail = {}) {
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send("update:status", { status, ...detail });
+}
+
+function setupUpdater() {
+  autoUpdater.autoDownload = false;
+  autoUpdater.autoInstallOnAppQuit = false;
+  autoUpdater.on("checking-for-update", () => sendUpdateStatus("checking"));
+  autoUpdater.on("update-available", (info) => sendUpdateStatus("available", { version: info.version }));
+  autoUpdater.on("update-not-available", (info) => sendUpdateStatus("current", { version: info.version || app.getVersion() }));
+  autoUpdater.on("download-progress", (progress) => sendUpdateStatus("downloading", { percent: Math.round(progress.percent || 0) }));
+  autoUpdater.on("update-downloaded", (info) => sendUpdateStatus("downloaded", { version: info.version }));
+  autoUpdater.on("error", (error) => sendUpdateStatus("error", { message: String(error?.message || error).slice(0, 300) }));
+}
+
 function setRoaming(enabled) {
   clearInterval(roamingTimer); roamingTimer = null;
   if (!enabled) return false;
@@ -125,6 +141,10 @@ function createTray() {
 }
 
 function registerIpc() {
+  ipcMain.handle("update:version", () => app.getVersion());
+  ipcMain.handle("update:check", async () => { if (!app.isPackaged) return { development: true, version: app.getVersion() }; const result = await autoUpdater.checkForUpdates(); return { version: result?.updateInfo?.version || app.getVersion() }; });
+  ipcMain.handle("update:download", async () => { if (!app.isPackaged) throw new Error("开发模式不能下载更新"); await autoUpdater.downloadUpdate(); return true; });
+  ipcMain.handle("update:install", () => { setImmediate(() => autoUpdater.quitAndInstall(false, true)); return true; });
   ipcMain.handle("state:get", () => store.publicState());
   ipcMain.handle("state:save", (_event, value) => store.saveConfig(value || {}));
   ipcMain.handle("state:clear-memory", () => { store.clearMemory(); return true; });
@@ -236,6 +256,7 @@ app.whenReady().then(() => {
   if (!app.isPackaged && process.argv.includes("--qa-session")) store.setSession("qa@local.test");
   otp = new OtpService({ development: !app.isPackaged });
   createWindow();
+  setupUpdater();
   createTray();
   registerIpc();
   globalShortcut.register("CommandOrControl+Shift+Space", () => {

@@ -149,6 +149,13 @@
           <label>剪贴板翻译目标语言</label><div class="inline-tool"><input id="translateLanguageInput" value="中文"><button id="translateButton" class="secondary">翻译</button></div><p id="translateResult" class="hint"></p>
           <label>屏幕问答（仅点击时截取一次，不保存图片）</label><div class="inline-tool"><input id="screenQuestionInput" placeholder="屏幕上有什么？"><button id="screenAskButton" class="secondary">询问</button></div><p id="screenResult" class="hint"></p>
         </section>
+        <section class="setting-group">
+          <h3>应用更新</h3>
+          <p id="updateStatus" class="hint">当前版本：读取中…</p>
+          <div class="button-row"><button id="checkUpdateButton" class="secondary" type="button">检查更新</button><button id="downloadUpdateButton" class="primary hidden" type="button">下载更新</button></div>
+          <button id="installUpdateButton" class="primary full-button hidden" type="button">重启并安装</button>
+          <p class="hint">只在你点击后下载或安装，不会静默更新。</p>
+        </section>
         <button id="saveSettingsButton" class="primary" type="button">保存设置</button>
         <button id="mediaCenterButton" class="secondary" type="button">打开视频中心</button>
         <button id="clearMemoryButton" class="secondary danger" type="button">清除对话记忆</button>

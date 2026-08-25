@@ -45,6 +45,7 @@ const ui = {
   relationshipStage: $("#mobileRelationshipStage"), relationshipStats: $("#mobileRelationshipStats"), bondProgress: $("#mobileBondProgress"),
   proactive: $("#mobileProactiveEnabled"), facts: $("#mobileMemoryFacts"), diary: $("#mobileCompanionDiary"), exportData: $("#mobileExportButton"), importData: $("#mobileImportInput"), clearCompanion: $("#mobileClearCompanion"),
   todoInput: $("#mobileTodoInput"), todoAdd: $("#mobileTodoAdd"), todoList: $("#mobileTodoList"), focusMinutes: $("#mobileFocusMinutes"), focus: $("#mobileFocusButton"), focusStatus: $("#mobileFocusStatus"), weatherCity: $("#mobileWeatherCity"), weather: $("#mobileWeatherButton"), weatherResult: $("#mobileWeatherResult"),
+  updateStatus: $("#mobileUpdateStatus"), checkUpdate: $("#mobileCheckUpdate"), openUpdate: $("#mobileOpenUpdate"),
   status: $("#settingsStatus"),
 };
 const defaults = {
@@ -75,6 +76,8 @@ let spriteTimer;
 let lookResetTimer;
 let currentPetState = "idle";
 let localModelObjectUrl = "";
+const APP_VERSION = "0.6.3";
+let latestReleaseUrl = "";
 let mobileFocusTimer;
 let todos = readLocalJson("neopet-mobile-todos", []); if (!Array.isArray(todos)) todos = [];
 function renderTodos(){ui.todoList.replaceChildren(...todos.map((todo,index)=>{const row=document.createElement("div");row.className=`todo-row${todo.done?" done":""}`;const check=document.createElement("input");check.type="checkbox";check.checked=todo.done;const span=document.createElement("span");span.textContent=todo.text;const del=document.createElement("button");del.type="button";del.textContent="删除";del.className="text-button";check.onchange=()=>{todo.done=check.checked;localStorage.setItem("neopet-mobile-todos",JSON.stringify(todos));renderTodos()};del.onclick=()=>{todos.splice(index,1);localStorage.setItem("neopet-mobile-todos",JSON.stringify(todos));renderTodos()};row.append(check,span,del);return row}))}
@@ -533,6 +536,8 @@ ui.install.addEventListener("click", async () => {
 ui.todoAdd.addEventListener("click",()=>{const text=ui.todoInput.value.trim().slice(0,100);if(!text)return;todos.unshift({text,done:false});ui.todoInput.value="";localStorage.setItem("neopet-mobile-todos",JSON.stringify(todos));renderTodos()});
 ui.focus.addEventListener("click",()=>{if(mobileFocusTimer){clearInterval(mobileFocusTimer);mobileFocusTimer=null;ui.focus.textContent="开始专注";ui.focusStatus.textContent="已取消";return}const deadline=Date.now()+Math.max(1,Math.min(180,Number(ui.focusMinutes.value)||25))*60000;ui.focus.textContent="取消";const tick=()=>{const left=Math.max(0,Math.ceil((deadline-Date.now())/1000));ui.focusStatus.textContent=`剩余 ${Math.floor(left/60)}:${String(left%60).padStart(2,"0")}`;if(left<=0){clearInterval(mobileFocusTimer);mobileFocusTimer=null;ui.focus.textContent="开始专注";ui.focusStatus.textContent="专注完成";showBubble("专注完成，活动一下吧！",5000)}};tick();mobileFocusTimer=setInterval(tick,1000)});
 ui.weather.addEventListener("click",async()=>{ui.weatherResult.textContent="查询中…";try{const city=ui.weatherCity.value.trim();if(!city)throw new Error("请输入城市");const response=await fetch(`https://wttr.in/${encodeURIComponent(city)}?format=j1`);if(!response.ok)throw new Error("天气服务暂不可用");const current=(await response.json()).current_condition?.[0];ui.weatherResult.textContent=`${city} · ${current?.weatherDesc?.[0]?.value||""} · ${current?.temp_C}°C`}catch(e){ui.weatherResult.textContent=e.message}});
+ui.checkUpdate.addEventListener("click",async()=>{ui.checkUpdate.disabled=true;ui.updateStatus.textContent="正在检查更新…";try{const response=await fetch("https://api.github.com/repos/schlapiadeziel-rgb/NeoPet-AI/releases/latest",{headers:{Accept:"application/vnd.github+json"}});if(!response.ok)throw new Error(`GitHub 返回 ${response.status}`);const release=await response.json();const latest=String(release.tag_name||"").replace(/^v/,"");latestReleaseUrl=release.html_url||"https://github.com/schlapiadeziel-rgb/NeoPet-AI/releases/latest";if(latest&&latest!==APP_VERSION){ui.updateStatus.textContent=`发现新版本 ${latest}`;ui.openUpdate.classList.remove("hidden")}else{ui.updateStatus.textContent=`已是最新版本 ${APP_VERSION}`;ui.openUpdate.classList.add("hidden")}}catch(error){ui.updateStatus.textContent=`检查失败：${error.message}`}finally{ui.checkUpdate.disabled=false}});
+ui.openUpdate.addEventListener("click",()=>{location.href=latestReleaseUrl||"https://github.com/schlapiadeziel-rgb/NeoPet-AI/releases/latest"});
 applyConfig();
 renderTodos();
 setupRecognition();
