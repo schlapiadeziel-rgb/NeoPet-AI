@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">NeoAI</string>
+    <string name="accessibility_service_name">NeoAI 跨 App 协助</string>
+    <string name="accessibility_description">仅执行你在 NeoAI 中确认的有限操作，并在密码、验证码、支付或转账界面自动停止。</string>
+</resources>

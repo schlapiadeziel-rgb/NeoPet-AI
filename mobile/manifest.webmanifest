@@ -1,11 +1,11 @@
 {
-  "name": "NeoPet AI Mobile",
-  "short_name": "NeoPet AI",
-  "description": "可自定义模型、语音和角色的跨平台 AI 宠物",
+  "name": "NeoAI Mobile Workbench",
+  "short_name": "NeoAI",
+  "description": "支持自由模型、文件分析、语音和跨 App 协助的移动 AI 工作台",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#151126",
-  "theme_color": "#151126",
+  "background_color": "#090a0e",
+  "theme_color": "#090a0e",
   "icons": [{"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
 }

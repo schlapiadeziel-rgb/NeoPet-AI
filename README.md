@@ -1,8 +1,8 @@
 # NeoPet AI
 
-NeoPet AI is a cross-platform AI desktop pet with a transparent always-on-top window, email OTP login, freely configurable OpenAI-compatible models, multilingual voice input/output, response-driven animations, structured local memory, relationship growth, companion diaries and proactive greetings, multiple built-in pets, AI-generated or imported pet artwork, local or remote GLB/GLTF 3D pets, and a video center for AI subtitle translation, danmaku generation, and video calls.
+NeoPet AI now has two purpose-built surfaces: a Windows AI desktop pet and the NeoAI Android/mobile assistant. Windows retains its original animated pets, care, memory and transparent always-on-top mode. Mobile is a conversation-first workbench with files, voice, phone tools and user-confirmed cross-app assistance.
 
-Windows and Android are packaged from the same mobile-first pet experience. The Electron project also contains macOS DMG and Linux AppImage targets for later platform-specific verification.
+Both surfaces accept freely configurable OpenAI-compatible APIs and LAN model servers. The Android app also includes an arm64 llama.cpp runtime and an in-app model catalog: users choose a GGUF model, download it into app-private storage and run it without Ollama or an API key. The browser/PWA build keeps API and LAN modes because web sandboxes cannot load the bundled Android runtime.
 
 Windows also supports a modular offline runtime: Whisper Tiny STT, Ollama with Gemma 3 1B, and pyttsx3 TTS, with a reserved Kokoro provider boundary.
 

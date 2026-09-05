@@ -30,6 +30,8 @@ contextBridge.exposeInMainWorld("neopet", {
     action: (action) => ipcRenderer.invoke("care:action", action),
     buy: (item) => ipcRenderer.invoke("care:buy", item)
   },
+  achievement: { record: (event, value) => ipcRenderer.invoke("achievement:record", event, value) },
+  provider: { apply: (id) => ipcRenderer.invoke("provider:apply", id), listModels: () => ipcRenderer.invoke("provider:list-models") },
   tools: {
     addTodo: (text) => ipcRenderer.invoke("tools:todo-add", text),
     toggleTodo: (id) => ipcRenderer.invoke("tools:todo-toggle", id),

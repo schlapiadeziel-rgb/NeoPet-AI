@@ -1,6 +1,6 @@
-# NeoPet AI 桌面端与移动端
+# NeoPet AI 桌宠 + NeoAI 手机助手
 
-NeoPet AI 是一个跨电脑与移动设备的 AI 宠物。电脑端提供透明置顶桌宠，移动端提供可安装 PWA；两端都可连接 OpenAI 兼容 API，也可以把 API 地址改成本机 `llama-server` 等兼容服务。
+电脑端继续提供透明置顶 AI 桌宠、原创角色、养成和记忆。移动端已经改为 NeoAI 手机助手：以对话、文件、语音、手机工具和模型中心为主，不再放置桌面宠物。两端都可连接 OpenAI 兼容 API 或局域网模型服务。
 
 ![小诺 v2 动作图集质检图](docs/xiaonuo-contact-sheet.png)
 
@@ -18,37 +18,36 @@ Windows 版支持 Whisper Tiny 离线语音识别、Ollama + Gemma 3 1B 离线�
 
 ## 0.2.0 多宠物与 3D
 
-电脑版和移动版现在使用同一套角色比例、动作状态、快捷操作和视觉语言。电脑端保留适合工作的透明悬浮模式，展开后与移动端使用相同的宠物舞台、`摸摸 / 挥手 / 说话`入口和聊天卡片；平台差异只保留在窗口形态，不再把两端做成两个不同产品。
+电脑版保留小诺、云团、月狸、3D/导入角色和透明悬浮桌宠。自 0.7.0 起，移动端改为独立的 NeoAI 手机工作台，不再复用宠物舞台；这是面向手机任务效率的明确产品分工。
 
-| Windows 悬浮模式 | Windows 展开模式 | 移动端 |
-| --- | --- | --- |
-| ![Windows 悬浮模式](docs/desktop-compact-qa.png) | ![Windows 展开模式](docs/desktop-expanded-qa.png) | ![移动端](docs/mobile-unified-qa.png) |
+| Windows 悬浮模式 | Windows 展开模式 |
+| --- | --- |
+| ![Windows 悬浮模式](docs/desktop-compact-qa.png) | ![Windows 展开模式](docs/desktop-expanded-qa.png) |
 
 设计参考与取舍见 [产品参考研究](docs/DESIGN_REFERENCES.md)。
 
-## 移动端
+## NeoAI 移动端
 
-移动端源码在 `mobile/`，可安装到 Android、iPhone、iPad 和支持 PWA 的桌面浏览器。内置小诺、云团、月狸三只动作宠物，也可导入本地或网络 GLB/GLTF 真 3D 模型。
+移动端源码在 `mobile/`，浏览器/PWA 支持 Android、iPhone、iPad。Android APK 额外内置 arm64 llama.cpp 推理引擎，用户可在应用的模型中心查看名称、大小、建议内存和语言能力，自主选择 Qwen3 GGUF 模型并在应用内下载、选择和离线使用，无需安装 Ollama。高级用户也能添加其他 HTTPS GGUF 直链。
 
 ```powershell
 npm run mobile:serve
 ```
 
-打开 `http://127.0.0.1:4173`。移动版包括自适应宠物、触摸互动、闲置动作、语音输入与朗读、自由模型配置、自定义图片和离线应用外壳。Android 原生悬浮层与 iOS WidgetKit 是平台增强层，不属于网页权限范围。
+打开 `http://127.0.0.1:4173`。移动版包括会话历史、附件分析、语音输入与朗读、自由 API、局域网模型、手机工具、视频中心和离线应用外壳。PWA 不具备 Android 原生本地推理和跨 App 控制能力。
 
 Android 工程位于 `android/`，打包时直接复用 `mobile/` 的页面资源。调试 APK 可通过 Android Studio 构建，或使用仓库内 Gradle Wrapper 执行 `android\\gradlew.bat -p android assembleDebug`。
 
-### Android 悬浮桌宠与权限
+### Android 本地模型、手机协助与权限
 
-Android APK 会在顶部显示“悬浮授权 / 开启悬浮 / 关闭悬浮”按钮，PWA 和 iPhone 不显示该按钮。权限遵循按需申请：
+Android APK 的本机模型文件位于应用私有目录，卸载应用会一并删除。跨 App 协助默认关闭，用户必须在系统无障碍设置中手动开启，而且每次执行前仍需在 NeoAI 内确认。权限遵循按需申请：
 
 - `INTERNET`：连接云端 API 或局域网本地模型，安装时自动授予。
 - `RECORD_AUDIO`：只有用户主动使用语音输入时才申请；拒绝后仍可文字聊天。
-- `SYSTEM_ALERT_WINDOW`：只有用户主动开启悬浮桌宠时才跳转系统设置授权。
-- `POST_NOTIFICATIONS`：开启悬浮桌宠时申请，用于显示可见的常驻控制通知；拒绝后 Android 仍会在系统任务管理界面显示前台服务状态。
-- `FOREGROUND_SERVICE` 与 `FOREGROUND_SERVICE_SPECIAL_USE`：用于维持用户主动开启的互动桌宠，服务用途已在清单中声明。
+- `CAMERA`：只有用户主动测试视频通话或拍照时才申请。
+- 无障碍服务：系统单独授权，用于执行用户已确认的有限点击、输入、滚动和返回；密码、验证码、银行、支付和购买界面自动停止。
 
-悬浮宠物支持拖动、点击动作反馈、语音入口和返回完整聊天；通知中始终提供“关闭桌宠”。选择宠物图片或 3D 模型继续使用系统文件选择器，不申请读取全部存储空间。当前没有启用视频通话，因此不会提前申请摄像头权限。
+模型下载只接受 HTTPS，并检查文件名、大小与剩余空间；不申请读取全部存储空间。拨号和短信只打开系统编辑页，不会直接拨出或发送。
 
 ## 桌面宠物交互
 
@@ -73,7 +72,7 @@ Android APK 会在顶部显示“悬浮授权 / 开启悬浮 / 关闭悬浮”�
 - 系统语音朗读、语速和声音选择；支持时启用系统语音识别。
 - 可指定中文、英语、日语、韩语，或跟随输入自动识别。
 - AI 生成原创宠物，或导入 PNG、WebP、JPG 图片。
-- 小诺、云团、月狸三只内置动作宠物；电脑端、PWA 与 Android 悬浮层同步选择。
+- 小诺、云团、月狸三只内置动作宠物保留在电脑端；移动端不加载桌宠素材。
 - 导入本地或网络 GLB/GLTF 真 3D 宠物，支持触摸旋转和模型自带动画。
 - 视频中心可载入本地视频、按当前时间添加弹幕、根据字幕用 AI 批量生成弹幕、翻译字幕并导出 VTT。
 - 视频通话入口会先测试摄像头和麦克风，再创建可分享的加密 Jitsi 会议链接；摄像头权限只在用户点击测试时申请。

@@ -3,17 +3,18 @@ const $ = (selector) => document.querySelector(selector);
 const elements = {
   loginView: $("#loginView"), petView: $("#petView"), email: $("#emailInput"), code: $("#codeInput"), codeArea: $("#codeArea"),
   sendCode: $("#sendCodeButton"), verifyCode: $("#verifyCodeButton"), authStatus: $("#authStatus"), petStage: $("#petStage"),
-  defaultPet: $("#defaultPet"), customPet: $("#customPet"), petModel: $("#petModel"), speechBubble: $("#speechBubble"), petStateLabel: $("#petStateLabel"), homeRelationshipStage: $("#homeRelationshipStage"), homeMood: $("#homeMood"), homeMemoryCount: $("#homeMemoryCount"), chatPetName: $("#chatPetName"),
+  defaultPet: $("#defaultPet"), customPet: $("#customPet"), petModel: $("#petModel"), speechBubble: $("#speechBubble"), petStateLabel: $("#petStateLabel"), homeRelationshipStage: $("#homeRelationshipStage"), homeMood: $("#homeMood"), homeMemoryCount: $("#homeMemoryCount"), compactMood: $("#compactMood"), compactLevel: $("#compactLevel"), compactHunger: $("#compactHunger"), petContextMenu: $("#petContextMenu"), chatPetName: $("#chatPetName"),
   messages: $("#messages"), chatForm: $("#chatForm"), messageInput: $("#messageInput"), mic: $("#micButton"), chatPanel: $("#chatPanel"),
   careLevel: $("#careLevel"), careCoins: $("#careCoins"), careHunger: $("#careHunger"), careEnergy: $("#careEnergy"), careHappiness: $("#careHappiness"), careCleanliness: $("#careCleanliness"), foodCount: $("#foodCount"), snackCount: $("#snackCount"), soapCount: $("#soapCount"),
   touch: $("#touchButton"), wave: $("#waveButton"), quickMic: $("#quickMicButton"), compactMic: $("#compactMicButton"), compactChat: $("#compactChatButton"),
   compact: $("#compactButton"), settings: $("#settingsButton"), hide: $("#hideButton"), settingsPanel: $("#settingsPanel"),
   closeSettings: $("#closeSettingsButton"), petTitle: $("#petTitle"), accountEmail: $("#accountEmail"), accountStatus: $("#accountStatus"), switchAccount: $("#switchAccountButton"), petPicker: $("#petPicker"), petName: $("#petNameInput"), personality: $("#personalityInput"),
-  baseUrl: $("#baseUrlInput"), model: $("#modelInput"), imageModel: $("#imageModelInput"), apiKey: $("#apiKeyInput"),
+  provider: $("#providerSelect"), refreshModels: $("#refreshModelsButton"), baseUrl: $("#baseUrlInput"), model: $("#modelInput"), imageModel: $("#imageModelInput"), apiKey: $("#apiKeyInput"),
   apiKeyHint: $("#apiKeyHint"), petPrompt: $("#petPromptInput"), generatePet: $("#generatePetButton"), importAvatar: $("#importAvatarButton"),
   restoreAvatar: $("#restoreAvatarButton"), modelUrl: $("#modelUrlInput"), modelFile: $("#modelFileInput"), language: $("#languageSelect"), voice: $("#voiceSelect"), speechRate: $("#speechRateInput"), speechRateValue: $("#speechRateValue"), sttProvider: $("#sttProviderSelect"), ttsProvider: $("#ttsProviderSelect"), wakeWordEnabled: $("#wakeWordEnabled"), wakeWord: $("#wakeWordInput"), roamEnabled: $("#roamEnabled"), installRuntime: $("#installRuntimeButton"), ollamaPreset: $("#ollamaPresetButton"), runtimeStatusButton: $("#runtimeStatusButton"), runtimeStatus: $("#runtimeStatus"),
   relationshipStage: $("#relationshipStage"), relationshipStats: $("#relationshipStats"), bondProgress: $("#bondProgress"), proactiveEnabled: $("#proactiveEnabled"),
   memoryFacts: $("#memoryFacts"), companionDiary: $("#companionDiary"), exportMemory: $("#exportMemoryButton"), importMemory: $("#importMemoryButton"), clearCompanion: $("#clearCompanionButton"),
+  achievementSummary: $("#achievementSummary"), achievementList: $("#achievementList"),
   todoInput: $("#todoInput"), todoAdd: $("#todoAddButton"), todoList: $("#todoList"), focusMinutes: $("#focusMinutesInput"), focus: $("#focusButton"), focusStatus: $("#focusStatus"), weatherCity: $("#weatherCityInput"), weather: $("#weatherButton"), weatherResult: $("#weatherResult"), launch: $("#launchButton"), translateLanguage: $("#translateLanguageInput"), translate: $("#translateButton"), translateResult: $("#translateResult"), screenQuestion: $("#screenQuestionInput"), screenAsk: $("#screenAskButton"), screenResult: $("#screenResult"),
   updateStatus: $("#updateStatus"), checkUpdate: $("#checkUpdateButton"), downloadUpdate: $("#downloadUpdateButton"), installUpdate: $("#installUpdateButton"),
   saveSettings: $("#saveSettingsButton"), mediaCenter: $("#mediaCenterButton"), clearMemory: $("#clearMemoryButton"), logout: $("#logoutButton"), settingsStatus: $("#settingsStatus")
@@ -53,6 +54,15 @@ const PETS = [
   { id: "yuntuan", name: "云团", description: "柔软治愈的3D云朵猫", personality: "温柔、治愈、好奇，善于安慰和倾听，回答自然亲切。" },
   { id: "yueli", name: "月狸", description: "月光森林里的灵狐伙伴", personality: "安静、灵动、可靠，带一点神秘感，会耐心陪伴并给出清晰回答。" }
 ];
+const ACHIEVEMENTS = [
+  ["first_feed","🍖","第一顿饭","第一次喂宠物"],["feed_10","🥣","可靠饲养员","累计喂食 10 次"],["play_10","🎭","最佳玩伴","累计玩耍 10 次"],["chat_10","💬","无话不谈","完成 10 次对话"],["chat_50","🫶","默契伙伴","完成 50 次对话"],["touch_20","💗","摸摸专家","摸摸宠物 20 次"],["settings","⚙️","认真照顾","打开设置中心"],["level_5","⭐","茁壮成长","宠物达到 5 级"],["streak_7","🔥","一周相伴","连续陪伴 7 天"]
+];
+
+function renderAchievements() {
+  const unlocked = appState?.achievements?.unlocked || {};
+  elements.achievementSummary.textContent = `${Object.keys(unlocked).length} / ${ACHIEVEMENTS.length} 已解锁`;
+  elements.achievementList.replaceChildren(...ACHIEVEMENTS.map(([id, icon, name, description]) => { const card=document.createElement("div");card.className=`achievement-card${unlocked[id]?" unlocked":""}`;card.innerHTML=`<b>${icon}</b><span>${name}</span><small>${unlocked[id]?description:"尚未解锁"}</small>`;return card; }));
+}
 
 function petById(id) {
   return PETS.find((pet) => pet.id === id) || PETS[0];
@@ -155,12 +165,16 @@ function scheduleIdle() {
   clearTimeout(idleTimer);
   clearTimeout(idleMotionTimer);
   const startedAt = Date.now();
+  const mood = appState?.emotion?.mood || "平静";
   const idleMotions = [
     { action: "wave", emotion: "happy", label: "向你挥手" },
     { action: "nod", emotion: "curious", label: "看看你在做什么" },
     { action: "happy", emotion: "happy", label: "心情不错" },
     { action: "dance", emotion: "excited", label: "偷偷活动一下" }
   ];
+  if (mood === "困倦") idleMotions.push({ action: "sleep", emotion: "neutral", label: "有点困了" }, { action: "sleep", emotion: "neutral", label: "打个盹" });
+  if (mood === "兴奋" || mood === "开心") idleMotions.push({ action: "dance", emotion: "excited", label: "开心地活动" });
+  if (mood === "好奇") idleMotions.push({ action: "nod", emotion: "curious", label: "好奇地观察" });
   const playIdleMotion = () => {
     if (Date.now() - startedAt >= 55_000) return;
     const motion = idleMotions[Math.floor(Math.random() * idleMotions.length)];
@@ -170,11 +184,12 @@ function scheduleIdle() {
     idleMotionTimer = setTimeout(playIdleMotion, 12_000 + Math.random() * 10_000);
   };
   idleMotionTimer = setTimeout(playIdleMotion, 10_000 + Math.random() * 8_000);
+  const sleepDelay = (appState?.care?.energy || 70) < 30 || new Date().getHours() < 6 ? 45_000 : 180_000;
   idleTimer = setTimeout(() => {
     clearTimeout(idleMotionTimer);
     applyPetState("sleep", "neutral");
     showBubble("呼…我先眯一会儿。", 3500);
-  }, 60_000);
+  }, sleepDelay);
 }
 
 async function setPetMode(compact, focusChat = false) {
@@ -190,6 +205,7 @@ function openSettingsPanel() {
   setPetMode(false).then(() => {
     populateSettings();
     elements.settingsPanel.classList.remove("hidden");
+    window.neopet.achievement.record("settings").then((result) => { appState = result.state; renderAchievements(); if (result.newlyUnlocked?.length) showBubble(`成就解锁：${result.newlyUnlocked[0].name}`, 3500); });
   });
 }
 
@@ -231,7 +247,9 @@ function renderCompanion() {
   elements.bondProgress.style.width = `${Math.min(100, Number(companion.xp || 0) % 100)}%`;
   elements.proactiveEnabled.checked = companion.proactiveEnabled !== false;
   elements.homeRelationshipStage.textContent = companion.stage || "初识";
-  elements.homeMood.textContent = companion.mood || "平静";
+  const liveMood = appState?.emotion?.mood || companion.mood || "平静";
+  elements.homeMood.textContent = liveMood;
+  elements.compactMood.textContent = liveMood;
   elements.homeMemoryCount.textContent = `${companion.facts?.length || 0} 条记忆`;
   const facts = Array.isArray(companion.facts) ? companion.facts : [];
   elements.memoryFacts.replaceChildren(...(facts.length ? facts.slice().reverse().map((fact) => {
@@ -260,6 +278,7 @@ function renderCare() {
   elements.careLevel.textContent = care.level || 1; elements.careCoins.textContent = Math.floor(care.coins || 0);
   [[elements.careHunger, care.hunger], [elements.careEnergy, care.energy], [elements.careHappiness, care.happiness], [elements.careCleanliness, care.cleanliness]].forEach(([bar, value]) => { bar.style.width = `${Math.max(0, Math.min(100, value || 0))}%`; });
   elements.foodCount.textContent = care.inventory?.food || 0; elements.snackCount.textContent = care.inventory?.snack || 0; elements.soapCount.textContent = care.inventory?.soap || 0;
+  elements.compactLevel.textContent = care.level || 1; elements.compactHunger.style.width = `${Math.max(0, Math.min(100, care.hunger || 0))}%`;
 }
 
 function populateSettings() {
@@ -268,6 +287,7 @@ function populateSettings() {
   elements.petName.value = appState.pet.name;
   elements.personality.value = appState.pet.personality;
   elements.baseUrl.value = appState.ai.baseUrl;
+  elements.provider.value = appState.ai.provider || "custom";
   elements.model.value = appState.ai.model;
   elements.imageModel.value = appState.ai.imageModel;
   elements.modelUrl.value = appState.pet.modelUrl || "";
@@ -289,6 +309,7 @@ function populateSettings() {
   renderCompanion();
   renderCare();
   renderTodos();
+  renderAchievements();
 }
 
 async function saveSettings() {
@@ -296,7 +317,7 @@ async function saveSettings() {
   setStatus(elements.settingsStatus, "正在保存…");
   try {
     appState = await window.neopet.state.save({
-      ai: { baseUrl: elements.baseUrl.value, model: elements.model.value, imageModel: elements.imageModel.value, apiKey: elements.apiKey.value },
+      ai: { provider: elements.provider.value, baseUrl: elements.baseUrl.value, model: elements.model.value, imageModel: elements.imageModel.value, apiKey: elements.apiKey.value },
       pet: { petId: appState.pet.petId, name: elements.petName.value, personality: elements.personality.value, modelUrl: elements.modelUrl.value, renderMode: elements.modelUrl.value ? "3d" : appState.pet.renderMode, language: elements.language.value, voiceName: elements.voice.value, speechRate: elements.speechRate.value },
       runtime: { sttProvider: elements.sttProvider.value, ttsProvider: elements.ttsProvider.value, wakeWordEnabled: elements.wakeWordEnabled.checked, wakeWord: elements.wakeWord.value, roamEnabled: elements.roamEnabled.checked }
     });
@@ -366,6 +387,8 @@ async function sendMessage(text) {
     speak(response.reply, response.action, response.emotion);
     appState = await window.neopet.state.get();
     renderCompanion();
+    renderCare();
+    renderAchievements();
   } catch (error) {
     appendMessage("assistant", `连接失败：${error.message}`);
     showBubble(error.message, 5000);
@@ -520,6 +543,7 @@ function touchPet() {
   showBubble("嘿嘿，好舒服！", 2200);
   setTimeout(() => applyPetState("idle", "happy"), 2200);
   scheduleIdle();
+  window.neopet.achievement.record("touch").then((result) => { appState = result.state; renderAchievements(); if (result.newlyUnlocked?.length) showBubble(`成就解锁：${result.newlyUnlocked[0].name}`, 3500); });
 }
 function waveToUser() {
   speechSynthesis.cancel();
@@ -575,7 +599,9 @@ elements.petStage.addEventListener("pointermove", (event) => {
   clearTimeout(lookResetTimer);
   lookResetTimer = setTimeout(() => animateSprite("idle"), 850);
 });
-elements.petStage.addEventListener("contextmenu", (event) => { event.preventDefault(); openSettingsPanel(); });
+elements.petStage.addEventListener("contextmenu", (event) => { event.preventDefault(); const menu=elements.petContextMenu; menu.style.left=`${Math.min(event.clientX, window.innerWidth-130)}px`;menu.style.top=`${Math.min(event.clientY, window.innerHeight-165)}px`;menu.classList.remove("hidden"); });
+document.addEventListener("pointerdown", (event) => { if (!elements.petContextMenu.contains(event.target)) elements.petContextMenu.classList.add("hidden"); });
+document.querySelectorAll("[data-pet-command]").forEach((button)=>button.addEventListener("click",()=>{elements.petContextMenu.classList.add("hidden");const command=button.dataset.petCommand;if(command==="feed"||command==="play")document.querySelector(`[data-care="${command}"]`)?.click();else if(command==="chat")setPetMode(false,true);else if(command==="settings")openSettingsPanel();}));
 
 elements.settings.addEventListener("click", openSettingsPanel);
 elements.closeSettings.addEventListener("click", () => elements.settingsPanel.classList.add("hidden"));
@@ -585,6 +611,8 @@ window.neopet.onOpenChat(() => setPetMode(false, true));
 
 elements.speechRate.addEventListener("input", () => { elements.speechRateValue.textContent = Number(elements.speechRate.value).toFixed(1); });
 elements.saveSettings.addEventListener("click", saveSettings);
+elements.provider.addEventListener("change", () => { const urls={api:"https://api.openai.com/v1",ollama:"http://127.0.0.1:11434/v1",lmstudio:"http://127.0.0.1:1234/v1",llamacpp:"http://127.0.0.1:8080/v1"};if(urls[elements.provider.value])elements.baseUrl.value=urls[elements.provider.value]; });
+elements.refreshModels.addEventListener("click", async () => { if (!(await saveSettings())) return; elements.refreshModels.disabled=true;setStatus(elements.settingsStatus,"正在读取模型…");try{const models=await window.neopet.provider.listModels();const list=$("#modelSuggestions");list.replaceChildren(...models.map((name)=>{const option=document.createElement("option");option.value=name;return option}));if(!elements.model.value&&models[0])elements.model.value=models[0];setStatus(elements.settingsStatus,models.length?`发现 ${models.length} 个模型，请选择后保存`:"服务已连接，但没有返回模型");}catch(error){setStatus(elements.settingsStatus,`读取失败：${error.message}`,true)}finally{elements.refreshModels.disabled=false} });
 window.neopet.update.version().then((version) => { elements.updateStatus.textContent = `当前版本：${version}`; });
 window.neopet.update.onStatus((value) => { const labels = { checking: "正在检查更新…", available: `发现新版本 ${value.version || ""}`, current: `已是最新版本 ${value.version || ""}`, downloading: `正在下载更新 ${value.percent || 0}%`, downloaded: `版本 ${value.version || ""} 已下载完成`, error: `更新失败：${value.message || "未知错误"}` }; elements.updateStatus.textContent = labels[value.status] || "更新状态未知"; elements.downloadUpdate.classList.toggle("hidden", value.status !== "available"); elements.installUpdate.classList.toggle("hidden", value.status !== "downloaded"); elements.checkUpdate.disabled = value.status === "checking" || value.status === "downloading"; });
 elements.checkUpdate.addEventListener("click", async () => { elements.checkUpdate.disabled = true; try { const value = await window.neopet.update.check(); if (value.development) elements.updateStatus.textContent = `开发模式 ${value.version}，安装版中可检查更新`; } catch (error) { elements.updateStatus.textContent = `检查失败：${error.message}`; } finally { elements.checkUpdate.disabled = false; } });

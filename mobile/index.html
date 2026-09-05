@@ -2,162 +2,136 @@
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width,initial-scale=1,viewport-fit=cover"
-    />
-    <meta name="theme-color" content="#151126" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta
-      name="apple-mobile-web-app-status-bar-style"
-      content="black-translucent"
-    />
-    <meta name="apple-mobile-web-app-title" content="NeoPet AI" />
-    <title>NeoPet AI Mobile</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <meta name="theme-color" content="#0c0d11" />
+    <meta name="description" content="NeoAI 是支持自由模型、附件、语音和创作工具的移动 AI 工作台。" />
+    <title>NeoAI 工作台</title>
     <link rel="manifest" href="manifest.webmanifest" />
-    <link rel="icon" href="icon.svg" type="image/svg+xml" />
+    <link rel="icon" href="icon.svg" />
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <main class="app-shell">
-      <header class="topbar">
-        <div>
-          <p class="eyebrow">NEOPET AI</p>
-          <div class="pet-heading"><span class="online-dot" aria-hidden="true"></span><h1 id="petName">小诺</h1></div>
+    <div id="appShell" class="app-shell">
+      <div id="drawerBackdrop" class="drawer-backdrop hidden"></div>
+      <aside id="sidebar" class="sidebar" aria-label="会话导航">
+        <div class="brand-row">
+          <div class="brand-mark" aria-hidden="true"><i></i><i></i></div>
+          <div><strong>NeoAI</strong><span>移动工作台</span></div>
+          <button id="closeSidebar" class="icon-button mobile-only" type="button" aria-label="关闭导航">×</button>
         </div>
-        <div class="top-actions">
-          <button id="installButton" class="ghost hidden">安装</button
-          ><button id="overlayButton" class="ghost hidden">悬浮</button
-          ><button id="settingsButton" class="icon" aria-label="设置">⚙</button>
+        <button id="newChatButton" class="new-chat" type="button"><span>＋</span> 新建任务</button>
+        <nav class="primary-nav">
+          <button class="nav-item active" type="button" data-view="chat"><span>◫</span>对话</button>
+          <button class="nav-item" type="button" data-view="tools"><span>◇</span>工具</button>
+        </nav>
+        <div class="history-heading"><span>最近任务</span><button id="clearChatsButton" type="button">清理</button></div>
+        <div id="conversationList" class="conversation-list"></div>
+        <div class="sidebar-footer">
+          <button id="installButton" class="nav-item hidden" type="button"><span>⇩</span>安装到桌面</button>
+          <button id="openSettingsButton" class="nav-item" type="button"><span>⚙</span>设置</button>
         </div>
-      </header>
+      </aside>
 
-      <section
-        id="petStage"
-        class="pet-stage state-idle"
-        data-emotion="neutral"
-      >
-        <div class="scene-orb orb-one"></div><div class="scene-orb orb-two"></div>
-        <div class="companion-summary"><span id="mobileHomeStage">初识</span><span id="mobileHomeMood">平静</span><span id="mobileHomeMemories">0 条记忆</span></div>
-        <div id="speechBubble" class="bubble hidden"></div>
-        <div
-          id="defaultPet"
-          class="pet sprite-pet"
-          role="button"
-          tabindex="0"
-          aria-label="触摸桌面宠物小诺"
-        ></div>
-        <img id="customPet" class="custom-pet hidden" alt="自定义宠物" />
-        <model-viewer id="petModel" class="pet-model hidden" camera-controls autoplay interaction-prompt="none" shadow-intensity="0" alt="3D AI 桌宠"></model-viewer>
-        <span id="stateLabel" class="state-label">空闲</span>
-      </section>
-
-      <section class="quick-actions" aria-label="快捷操作">
-        <button id="touchButton"><span aria-hidden="true">♡</span>摸摸</button
-        ><button id="waveButton"><span aria-hidden="true">◌</span>挥手</button
-        ><button id="micButton"><span aria-hidden="true">◉</span>说话</button>
-      </section>
-
-      <section class="care-card"><div class="care-heading"><strong>Lv.<span id="mobileCareLevel">1</span></strong><span><b id="mobileCareCoins">120</b> 金币</span></div><div class="care-meters"><button data-care="feed"><span>饱腹</span><i><b id="mobileCareHunger"></b></i></button><button data-care="rest"><span>精力</span><i><b id="mobileCareEnergy"></b></i></button><button data-care="play"><span>开心</span><i><b id="mobileCareHappiness"></b></i></button><button data-care="bath"><span>清洁</span><i><b id="mobileCareCleanliness"></b></i></button></div></section>
-
-      <section class="chat-card">
-        <header class="chat-heading"><div><strong>和 <span id="mobileChatPetName">小诺</span> 聊天</strong><small>会记住重要的事，也会用动作回应你</small></div><span>本地记忆</span></header>
-        <div id="messages" class="messages" aria-live="polite">
-          <div class="message pet-message">
-            你好，我会听、会说，也会根据回答做动作。
-          </div>
-        </div>
-        <form id="chatForm" class="composer">
-          <textarea
-            id="messageInput"
-            rows="1"
-            placeholder="和桌宠说点什么……"
-          ></textarea
-          ><button type="submit">发送</button>
-        </form>
-      </section>
-    </main>
-
-    <dialog id="settingsDialog">
-      <form method="dialog" class="settings-card">
-        <header>
-          <div>
-            <p class="eyebrow">CONTROL CENTER</p>
-            <h2>宠物设置</h2>
-          </div>
-          <button class="icon" value="cancel" aria-label="关闭">×</button>
+      <main class="workspace">
+        <header class="topbar">
+          <button id="openSidebar" class="icon-button mobile-only" type="button" aria-label="打开导航">☰</button>
+          <div class="task-heading"><strong id="taskTitle">新任务</strong><span id="connectionLabel">尚未配置模型</span></div>
+          <button id="modelPill" class="model-pill" type="button">选择模型⌄</button>
+          <button id="newChatTop" class="icon-button" type="button" aria-label="新建任务">＋</button>
         </header>
-        <label>选择宠物</label>
-        <div id="petPicker" class="pet-picker" role="radiogroup" aria-label="选择宠物"></div>
-        <label>名字<input id="nameInput" maxlength="30" /></label>
-        <label>性格<textarea id="personalityInput" rows="3"></textarea></label>
-        <label
-          >OpenAI 兼容 API 地址<input
-            id="baseUrlInput"
-            inputmode="url"
-            placeholder="https://api.openai.com/v1"
-        /></label>
-        <label
-          >聊天模型<input
-            id="modelInput"
-            list="modelSuggestions"
-            placeholder="自由填写模型名称"
-        /></label>
-        <datalist id="modelSuggestions">
-          <option value="gpt-4.1-mini"></option>
-          <option value="qwen2.5:3b"></option>
-          <option value="gemma3:4b"></option>
-          <option value="llama3.2:3b"></option>
-        </datalist>
-        <label
-          >API 密钥（仅保留到本次浏览器会话）<input
-            id="apiKeyInput"
-            type="password"
-            autocomplete="off"
-        /></label>
-        <label
-          >回复语言<select id="languageInput">
-            <option value="auto">自动识别</option>
-            <option value="zh-CN">中文</option>
-            <option value="en-US">English</option>
-            <option value="ja-JP">日本語</option>
-            <option value="ko-KR">한국어</option>
-          </select></label
-        >
-        <label
-          >导入原创宠物图片<input
-            id="avatarInput"
-            type="file"
-            accept="image/png,image/webp,image/jpeg,image/gif"
-        /></label>
-        <label>3D 模型网址（GLB/GLTF/VRM）<input id="modelUrlInput" type="url" placeholder="https://example.com/pet.glb" /></label>
-        <label>导入本地 3D/VRM 模型<input id="modelFileInput" type="file" accept=".glb,.gltf,.vrm,model/gltf-binary,model/gltf+json" /></label>
-        <p class="hint">
-          电影和动画只能作为风格灵感，请使用原创或已获授权的角色素材。
-        </p>
-        <section class="companion-settings">
-          <h3>陪伴与记忆</h3>
-          <div class="bond-card"><div><strong id="mobileRelationshipStage">初识</strong><span id="mobileRelationshipStats">信任 0 · 连续 0 天</span></div><div class="bond-track"><i id="mobileBondProgress"></i></div></div>
-          <label class="toggle-row"><input id="mobileProactiveEnabled" type="checkbox" />允许宠物主动问候</label>
-          <h4>记住的事情</h4><div id="mobileMemoryFacts" class="memory-list"><p class="hint">还没有长期记忆</p></div>
-          <h4>陪伴日记</h4><div id="mobileCompanionDiary" class="memory-list"><p class="hint">日记会随着相处逐渐出现</p></div>
-          <div class="data-actions"><button id="mobileExportButton" type="button" class="secondary">备份</button><label class="secondary import-button">导入<input id="mobileImportInput" type="file" accept="application/json" /></label></div>
-          <button id="mobileClearCompanion" type="button" class="secondary danger">清除全部陪伴数据</button>
+
+        <section id="chatView" class="view chat-view">
+          <div id="welcomePanel" class="welcome-panel">
+            <div class="orb" aria-hidden="true"><span></span></div>
+            <p class="eyebrow">YOUR AI WORKBENCH</p>
+            <h1>今天想完成什么？</h1>
+            <p>告诉我你想在手机上完成什么，我会给出步骤，或在你确认后打开对应功能。</p>
+            <div class="starter-grid">
+              <button type="button" data-prompt="帮我打开手机的 Wi-Fi 设置。"><b>管理手机设置</b><span>Wi‑Fi、蓝牙和系统设置</span></button>
+              <button type="button" data-prompt="帮我设置明天早上 7:30 的闹钟，先让我确认。"><b>设置提醒</b><span>闹钟、日历和待办建议</span></button>
+              <button type="button" data-tool="file"><b>分析手机文件</b><span>总结文档、代码和表格文本</span></button>
+              <button type="button" data-prompt="帮我用地图搜索附近的充电站，先让我确认。"><b>生活助手</b><span>地图、拨号、短信和分享</span></button>
+            </div>
+          </div>
+          <div id="messages" class="messages" role="log" aria-live="polite"></div>
+          <div class="composer-wrap">
+            <div id="attachmentChip" class="attachment-chip hidden"><span id="attachmentName"></span><button id="removeAttachment" type="button" aria-label="移除附件">×</button></div>
+            <form id="chatForm" class="composer">
+              <label class="attach-button" aria-label="添加附件">＋<input id="fileInput" type="file" accept="image/*,.txt,.md,.json,.csv,.js,.ts,.html,.css,.py,.java,.kt" /></label>
+              <textarea id="messageInput" rows="1" placeholder="给 NeoAI 发消息…"></textarea>
+              <button id="micButton" class="composer-button" type="button" aria-label="语音输入">◉</button>
+              <button id="sendButton" class="send-button" type="submit" aria-label="发送">↑</button>
+            </form>
+            <p id="composerHint" class="composer-hint">AI 可能会出错，重要信息请核实。</p>
+          </div>
         </section>
-        <section class="companion-settings"><h3>宠物商店</h3><p class="hint">食物 <b id="mobileFoodCount">0</b> · 零食 <b id="mobileSnackCount">0</b> · 清洁 <b id="mobileSoapCount">0</b></p><div class="shop-grid"><button type="button" class="secondary" data-buy="food">食物 ×3<br><small>15 金币</small></button><button type="button" class="secondary" data-buy="snack">零食 ×2<br><small>12 金币</small></button><button type="button" class="secondary" data-buy="soap">清洁 ×2<br><small>10 金币</small></button></div></section>
-        <section class="companion-settings"><h3>效率工具</h3><div class="inline-tool"><input id="mobileTodoInput" placeholder="添加待办"><button id="mobileTodoAdd" type="button" class="secondary">添加</button></div><div id="mobileTodoList" class="tool-results"></div><div class="inline-tool"><input id="mobileFocusMinutes" type="number" min="1" max="180" value="25"><button id="mobileFocusButton" type="button" class="secondary">开始专注</button></div><p id="mobileFocusStatus" class="hint">尚未开始</p><div class="inline-tool"><input id="mobileWeatherCity" placeholder="天气城市"><button id="mobileWeatherButton" type="button" class="secondary">查询</button></div><p id="mobileWeatherResult" class="hint"></p></section>
-        <section class="companion-settings"><h3>应用更新</h3><p id="mobileUpdateStatus" class="hint">当前版本：0.6.3</p><button id="mobileCheckUpdate" type="button" class="secondary">检查更新</button><button id="mobileOpenUpdate" type="button" class="primary hidden">打开新版下载页</button><p class="hint">Android 安装更新前会由系统再次确认。</p></section>
-        <button id="saveSettingsButton" class="primary" value="cancel">
-          保存
-        </button>
-        <a class="primary media-link" href="media.html">打开视频中心</a>
-        <button id="restorePetButton" class="secondary" value="cancel">
-          恢复默认宠物
-        </button>
-        <p id="settingsStatus" class="status"></p>
+
+        <section id="toolsView" class="view tools-view hidden">
+          <div class="section-intro"><p class="eyebrow">PHONE TOOLS</p><h1>让 AI 帮你使用手机</h1><p>高风险操作不会自动执行。NeoAI 只会准备动作，并在你确认后打开系统或目标应用。</p></div>
+          <div class="tool-grid">
+            <button type="button" data-prompt="帮我打开手机的 Wi-Fi 设置。"><span class="tool-icon violet">⌁</span><div><b>网络与设置</b><small>Wi‑Fi、蓝牙、系统和应用设置</small></div><i>→</i></button>
+            <button type="button" data-prompt="帮我设置一个闹钟，先询问时间并让我确认。"><span class="tool-icon cyan">◷</span><div><b>闹钟与日历</b><small>准备提醒和日程，最后由你确认</small></div><i>→</i></button>
+            <button type="button" data-prompt="帮我在地图上搜索一个地点，先询问地点并让我确认。"><span class="tool-icon green">⌖</span><div><b>地图与出行</b><small>搜索地点并打开地图应用</small></div><i>→</i></button>
+            <button type="button" data-prompt="帮我准备拨号或短信，先询问号码和内容，不要直接发送。"><span class="tool-icon orange">☎</span><div><b>联系与分享</b><small>打开拨号、短信编辑或系统分享</small></div><i>→</i></button>
+            <button type="button" data-tool="file"><span class="tool-icon violet">▤</span><div><b>文件分析</b><small>总结 TXT、Markdown、代码和表格文本</small></div><i>→</i></button>
+            <button type="button" data-tool="image"><span class="tool-icon blue">◎</span><div><b>图片理解</b><small>上传图片并提问，需视觉模型支持</small></div><i>→</i></button>
+            <button type="button" data-tool="translate"><span class="tool-icon green">文</span><div><b>多语言翻译</b><small>保留语气、格式和专有名词</small></div><i>→</i></button>
+            <a href="media.html"><span class="tool-icon pink">▶</span><div><b>视频中心</b><small>字幕、翻译、弹幕与视频通话</small></div><i>→</i></a>
+          </div>
+          <div class="privacy-card"><span>⌂</span><div><b>本地优先</b><p>会话记录保存在设备本地；API 密钥只保留在当前应用会话中。</p></div></div>
+        </section>
+      </main>
+    </div>
+
+    <dialog id="settingsDialog" class="settings-dialog">
+      <form method="dialog" class="settings-sheet">
+        <header><div><p class="eyebrow">SETTINGS</p><h2>AI 与工作台</h2></div><button class="icon-button" value="cancel" aria-label="关闭设置">×</button></header>
+        <section>
+          <h3>模型服务</h3>
+          <label>提供商<select id="providerSelect"><option value="api">默认 API</option><option value="ondevice">本机模型（Android）</option><option value="ollama">Ollama（局域网）</option><option value="lmstudio">LM Studio（局域网）</option><option value="llamacpp">llama.cpp（局域网）</option><option value="custom">自定义</option></select></label>
+          <label>OpenAI 兼容 API 地址<input id="baseUrlInput" inputmode="url" placeholder="https://api.openai.com/v1" /></label>
+          <label>模型<div class="field-action"><input id="modelInput" list="modelSuggestions" placeholder="自由填写模型名称" /><button id="refreshModelsButton" type="button">读取列表</button></div></label>
+          <datalist id="modelSuggestions"><option value="gpt-4.1-mini"></option><option value="qwen2.5:3b"></option><option value="gemma3:4b"></option><option value="llama3.2:3b"></option></datalist>
+          <label>API 密钥<input id="apiKeyInput" type="password" autocomplete="off" placeholder="仅保存到本次应用会话" /></label>
+          <p id="providerHint" class="hint">支持 OpenAI 兼容接口。手机访问电脑本地模型时应填写电脑的局域网 IP。</p>
+        </section>
+        <section id="localModelSection">
+          <h3>模型中心（Android）</h3>
+          <p class="hint">选择适合手机内存的模型，点一下即可下载。文件保存在本机私有目录，不会上传。</p>
+          <div id="localModelCatalog" class="model-catalog" aria-label="可下载模型"></div>
+          <details class="advanced-model"><summary>导入其他 GGUF 模型</summary>
+            <label>GGUF 下载地址<input id="localModelUrlInput" inputmode="url" placeholder="https://…/model.gguf" /></label>
+            <label>保存名称<input id="localModelNameInput" placeholder="例如 my-model-q4.gguf" /></label>
+            <button id="downloadLocalModelButton" type="button">下载自定义模型</button>
+          </details>
+          <div class="settings-actions"><button id="refreshLocalModelsButton" type="button">刷新已下载模型</button></div>
+          <p id="localModelStatus" class="hint"></p>
+        </section>
+        <section>
+          <h3>回答偏好</h3>
+          <label>系统指令<textarea id="systemPromptInput" rows="4"></textarea></label>
+          <label>回复语言<select id="languageInput"><option value="auto">跟随提问语言</option><option value="zh-CN">中文</option><option value="en-US">English</option><option value="ja-JP">日本語</option><option value="ko-KR">한국어</option></select></label>
+          <label class="toggle-row"><input id="speakRepliesInput" type="checkbox" />自动朗读回答</label>
+        </section>
+        <section>
+          <h3>跨 App 协助（仅 Android）</h3>
+          <p id="accessibilityStatus" class="hint">未检测到控制权限</p>
+          <button id="accessibilityButton" type="button" class="permission-button">打开无障碍服务设置</button>
+          <p class="hint">开启后可执行已确认的点击、输入、滚动和返回。密码、验证码、支付与转账相关界面始终禁止自动控制。</p>
+        </section>
+        <section>
+          <h3>本地数据</h3>
+          <div class="settings-actions"><button id="exportButton" type="button">备份会话</button><label class="file-button">导入备份<input id="importInput" type="file" accept="application/json" /></label></div>
+        </section>
+        <section>
+          <h3>应用更新</h3>
+          <p id="updateStatus" class="hint">当前版本：0.7.0</p>
+          <div class="settings-actions"><button id="checkUpdateButton" type="button">检查更新</button><button id="openUpdateButton" type="button" class="hidden">打开下载页</button></div>
+        </section>
+        <p id="settingsStatus" class="status" role="status"></p>
+        <button id="saveSettingsButton" class="save-button" type="button">保存设置</button>
       </form>
     </dialog>
-    <script src="vendor/model-viewer.min.js"></script>
     <script src="app.js"></script>
   </body>
 </html>

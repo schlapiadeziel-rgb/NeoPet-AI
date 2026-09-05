@@ -8,6 +8,7 @@ const ai = require("./ai");
 const { proactiveGreeting } = require("../shared/companion");
 const localRuntime = require("./runtime");
 const { autoUpdater } = require("electron-updater");
+const providers = require("./providers");
 
 let mainWindow;
 let mediaWindow;
@@ -148,6 +149,8 @@ function registerIpc() {
   ipcMain.handle("state:get", () => store.publicState());
   ipcMain.handle("state:save", (_event, value) => store.saveConfig(value || {}));
   ipcMain.handle("state:clear-memory", () => { store.clearMemory(); return true; });
+  ipcMain.handle("provider:apply", (_event, id) => { const preset=providers.PRESETS[id]; if(!preset)throw new Error("未知模型提供商"); return store.saveConfig({ai:{provider:id,baseUrl:preset.baseUrl}}); });
+  ipcMain.handle("provider:list-models", () => providers.listModels(store.data.ai.baseUrl, store.apiKey()));
   ipcMain.handle("auth:request-code", (_event, email) => otp.request(email));
   ipcMain.handle("auth:verify-code", (_event, { email, code }) => store.setSession(otp.verify(email, code)));
   ipcMain.handle("auth:logout", () => store.setSession(null));
@@ -181,7 +184,7 @@ function registerIpc() {
     await localRuntime.installRuntime(scriptPath);
     return localRuntime.runtimeStatus(store.data.runtime);
   });
-  ipcMain.handle("runtime:use-ollama", () => store.saveConfig({ ai: { baseUrl: "http://127.0.0.1:11434/v1", model: "gemma3:1b" } }));
+  ipcMain.handle("runtime:use-ollama", () => store.saveConfig({ ai: { provider: "ollama", baseUrl: "http://127.0.0.1:11434/v1", model: "gemma3:1b" } }));
   ipcMain.handle("runtime:transcribe", (_event, bytes) => localRuntime.transcribe(Buffer.from(bytes), store.data.runtime));
   ipcMain.handle("runtime:speak", (_event, text) => {
     const scriptPath = app.isPackaged ? path.join(process.resourcesPath, "app.asar.unpacked", "scripts", "pyttsx3_speak.py") : path.join(__dirname, "../../scripts/pyttsx3_speak.py");
@@ -206,6 +209,7 @@ function registerIpc() {
   ipcMain.handle("companion:forget-fact", (_event, id) => store.forgetFact(String(id || "")));
   ipcMain.handle("care:action", (_event, action) => store.careAction(String(action || "")));
   ipcMain.handle("care:buy", (_event, item) => store.buyCareItem(String(item || "")));
+  ipcMain.handle("achievement:record", (_event, event, value) => store.recordAchievement(String(event || ""), value));
   ipcMain.handle("tools:todo-add", (_event, text) => store.addTodo(text));
   ipcMain.handle("tools:todo-toggle", (_event, id) => store.toggleTodo(String(id || "")));
   ipcMain.handle("tools:todo-delete", (_event, id) => store.deleteTodo(String(id || "")));
