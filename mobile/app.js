@@ -1,5 +1,5 @@
 const $ = (selector) => document.querySelector(selector);
-const APP_VERSION = "0.7.1";
+const APP_VERSION = "0.7.2";
 const CONFIG_KEY = "neoai-mobile-config-v1";
 const CHATS_KEY = "neoai-mobile-chats-v1";
 const ACTIVE_CHAT_KEY = "neoai-mobile-active-chat";
@@ -29,9 +29,9 @@ const defaults = {
 };
 
 const LOCAL_MODEL_CATALOG = [
-  { id: "qwen3-0.6b-q8", name: "Qwen3 0.6B", file: "Qwen3-0.6B-Q8_0.gguf", size: "610 MB", memory: "建议 3 GB+ 内存", language: "中文 / 多语言 · 速度优先", url: "https://huggingface.co/Qwen/Qwen3-0.6B-GGUF/resolve/main/Qwen3-0.6B-Q8_0.gguf" },
-  { id: "qwen3-1.7b-q8", name: "Qwen3 1.7B", file: "Qwen3-1.7B-Q8_0.gguf", size: "1.71 GB", memory: "建议 6 GB+ 内存", language: "中文 / 多语言 · 均衡", url: "https://huggingface.co/Qwen/Qwen3-1.7B-GGUF/resolve/main/Qwen3-1.7B-Q8_0.gguf" },
-  { id: "qwen3-4b-q4", name: "Qwen3 4B", file: "Qwen3-4B-Q4_K_M.gguf", size: "2.33 GB", memory: "建议 8 GB+ 内存", language: "中文 / 多语言 · 质量优先", url: "https://huggingface.co/Qwen/Qwen3-4B-GGUF/resolve/main/Qwen3-4B-Q4_K_M.gguf" },
+  { id: "qwen3-0.6b-q8", name: "Qwen3 0.6B", file: "Qwen3-0.6B-Q8_0.gguf", size: "610 MB", memory: "建议 3 GB+ 内存", language: "中文 / 多语言 · 速度优先", url: "https://hf-mirror.com/Qwen/Qwen3-0.6B-GGUF/resolve/main/Qwen3-0.6B-Q8_0.gguf" },
+  { id: "qwen3-1.7b-q8", name: "Qwen3 1.7B", file: "Qwen3-1.7B-Q8_0.gguf", size: "1.71 GB", memory: "建议 6 GB+ 内存", language: "中文 / 多语言 · 均衡", url: "https://hf-mirror.com/Qwen/Qwen3-1.7B-GGUF/resolve/main/Qwen3-1.7B-Q8_0.gguf" },
+  { id: "qwen3-4b-q4", name: "Qwen3 4B", file: "Qwen3-4B-Q4_K_M.gguf", size: "2.33 GB", memory: "建议 8 GB+ 内存", language: "中文 / 多语言 · 质量优先", url: "https://hf-mirror.com/Qwen/Qwen3-4B-GGUF/resolve/main/Qwen3-4B-Q4_K_M.gguf" },
 ];
 
 const ACTIONS = {
@@ -287,9 +287,10 @@ window.__neoaiModelEvent = (id, raw) => {
     } else {
       if (transfer.poll) clearInterval(transfer.poll);
       modelTransfers.delete(id);
-      if (event.ok) { ui.model.value = transfer.fileName; ui.localModelStatus.textContent = `${transfer.fileName} 下载完成，已选中`; }
-      else ui.localModelStatus.textContent = `下载失败：${event.error || "未知错误"}`;
+      const message = event.ok ? `${transfer.fileName} 下载完成，已选中` : `下载失败：${event.error || "未知错误"}`;
+      if (event.ok) ui.model.value = transfer.fileName;
       renderLocalModelCatalog();
+      ui.localModelStatus.textContent = message;
     }
   } catch { ui.localModelStatus.textContent = "下载状态解析失败"; }
 };

@@ -337,7 +337,7 @@ public class MainActivity extends Activity {
                 if (!"https".equalsIgnoreCase(current.getProtocol())) throw new IllegalArgumentException("模型下载只允许 HTTPS");
                 connection = (HttpURLConnection) current.openConnection();
                 connection.setConnectTimeout(15000); connection.setReadTimeout(45000); connection.setInstanceFollowRedirects(false);
-                connection.setRequestProperty("User-Agent", "NeoAI-Android/0.7.1");
+                connection.setRequestProperty("User-Agent", "NeoAI-Android/0.7.2");
                 if (existingBytes > 0) connection.setRequestProperty("Range", "bytes=" + existingBytes + "-");
                 int status = connection.getResponseCode();
                 if (status >= 300 && status < 400) {
