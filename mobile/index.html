@@ -22,6 +22,7 @@
         <button id="newChatButton" class="new-chat" type="button"><span>＋</span> 新建任务</button>
         <nav class="primary-nav">
           <button class="nav-item active" type="button" data-view="chat"><span>◫</span>对话</button>
+          <button class="nav-item" type="button" data-view="agent"><span>✦</span>智能体</button>
           <button class="nav-item" type="button" data-view="tools"><span>◇</span>工具</button>
         </nav>
         <div class="history-heading"><span>最近任务</span><button id="clearChatsButton" type="button">清理</button></div>
@@ -63,6 +64,16 @@
               <button id="sendButton" class="send-button" type="submit" aria-label="发送">↑</button>
             </form>
             <p id="composerHint" class="composer-hint">AI 可能会出错，重要信息请核实。</p>
+          </div>
+        </section>
+
+        <section id="agentView" class="view agent-view hidden">
+          <div class="section-intro"><p class="eyebrow">AGENT CENTER</p><h1>把一次聊天变成持续工作</h1><p>工作区隔离目标和上下文；技能决定 AI 的工作方式；记忆由你查看、修改和删除。</p></div>
+          <div class="agent-layout">
+            <section class="agent-card"><div class="agent-card-head"><div><span class="agent-kicker">WORKSPACES</span><h2>工作区</h2></div><button id="newWorkspaceButton" type="button">＋ 新建</button></div><p class="agent-help">不同项目的指令、记忆和会话互不混用。</p><div id="workspaceList" class="workspace-list"></div></section>
+            <section class="agent-card"><div class="agent-card-head"><div><span class="agent-kicker">SKILLS</span><h2>技能</h2></div><span id="skillCount" class="count-pill">0 已启用</span></div><p class="agent-help">按任务启用能力。技能不会绕过操作确认。</p><div id="skillList" class="skill-list"></div></section>
+            <section class="agent-card"><div class="agent-card-head"><div><span class="agent-kicker">MEMORY</span><h2>长期记忆</h2></div><button id="clearMemoryButton" class="quiet-danger" type="button">清空</button></div><p class="agent-help">只保存你明确写入的资料，并作为背景信息提供给模型。</p><form id="memoryForm" class="memory-form"><input id="memoryInput" maxlength="240" placeholder="例如：我偏好简体中文和简洁回答" /><button type="submit">记住</button></form><div id="memoryList" class="memory-list"></div></section>
+            <section class="agent-card"><div class="agent-card-head"><div><span class="agent-kicker">TOOLS</span><h2>工具与安全</h2></div><span class="safety-pill">确认后执行</span></div><div id="toolStatusList" class="tool-status-list"></div></section>
           </div>
         </section>
 
@@ -125,7 +136,7 @@
         </section>
         <section>
           <h3>应用更新</h3>
-          <p id="updateStatus" class="hint">当前版本：0.7.4</p>
+          <p id="updateStatus" class="hint">当前版本：0.8.0</p>
           <div class="settings-actions"><button id="checkUpdateButton" type="button">检查更新</button><button id="openUpdateButton" type="button" class="hidden">打开下载页</button></div>
         </section>
         <p id="settingsStatus" class="status" role="status"></p>
