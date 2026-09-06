@@ -204,6 +204,11 @@ public class MainActivity extends Activity {
             case "system_settings": return new Intent(Settings.ACTION_SETTINGS);
             case "app_settings": return new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + getPackageName()));
             case "camera": return new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+            case "wechat": {
+                Intent intent = getPackageManager().getLaunchIntentForPackage("com.tencent.mm");
+                if (intent == null) throw new IllegalStateException("手机上未安装微信");
+                return intent;
+            }
             case "alarm": return new Intent(AlarmClock.ACTION_SET_ALARM)
                 .putExtra(AlarmClock.EXTRA_HOUR, bounded(args.optInt("hour", 8), 0, 23))
                 .putExtra(AlarmClock.EXTRA_MINUTES, bounded(args.optInt("minute", 0), 0, 59))
@@ -337,7 +342,7 @@ public class MainActivity extends Activity {
                 if (!"https".equalsIgnoreCase(current.getProtocol())) throw new IllegalArgumentException("模型下载只允许 HTTPS");
                 connection = (HttpURLConnection) current.openConnection();
                 connection.setConnectTimeout(15000); connection.setReadTimeout(45000); connection.setInstanceFollowRedirects(false);
-                connection.setRequestProperty("User-Agent", "NeoAI-Android/0.7.3");
+                connection.setRequestProperty("User-Agent", "NeoAI-Android/0.7.4");
                 if (existingBytes > 0) connection.setRequestProperty("Range", "bytes=" + existingBytes + "-");
                 int status = connection.getResponseCode();
                 if (status >= 300 && status < 400) {
