@@ -1,8 +1,9 @@
 const $ = (selector) => document.querySelector(selector);
-const APP_VERSION = "0.7.0";
+const APP_VERSION = "0.7.1";
 const CONFIG_KEY = "neoai-mobile-config-v1";
 const CHATS_KEY = "neoai-mobile-chats-v1";
 const ACTIVE_CHAT_KEY = "neoai-mobile-active-chat";
+const ANDROID_RELEASE_URL = "https://github.com/schlapiadeziel-rgb/NeoPet-AI/releases/latest";
 
 const ui = {
   sidebar: $("#sidebar"), backdrop: $("#drawerBackdrop"), openSidebar: $("#openSidebar"), closeSidebar: $("#closeSidebar"),
@@ -235,7 +236,13 @@ function renderLocalModelCatalog() {
     const detail = document.createElement("span"); detail.textContent = item.language;
     copy.append(title, meta, detail);
     const button = document.createElement("button"); button.type = "button";
-    if (!window.NeoAIAndroid?.downloadLocalModel) { button.textContent = "需安装版"; button.disabled = true; }
+    if (!window.NeoAIAndroid?.downloadLocalModel) {
+      button.textContent = "安装 Android 版";
+      button.addEventListener("click", () => {
+        ui.localModelStatus.textContent = "网页/PWA 不能运行原生 GGUF；正在打开 Android APK 下载页…";
+        location.assign(ANDROID_RELEASE_URL);
+      });
+    }
     else if (installed.has(item.file)) { button.textContent = ui.model.value === item.file ? "使用中" : "选择"; button.disabled = ui.model.value === item.file; button.addEventListener("click", () => { ui.model.value = item.file; renderLocalModelCatalog(); }); }
     else { button.textContent = "下载"; button.addEventListener("click", () => downloadLocalModel(item.url, item.file, button)); }
     card.append(copy, button); return card;
@@ -255,8 +262,18 @@ function downloadLocalModel(url, fileName, button) {
   const id = `model-${Date.now()}-${++requestSequence}`;
   if (button) { button.disabled = true; button.textContent = "准备…"; }
   ui.localModelStatus.textContent = `准备下载 ${fileName}…`;
-  modelTransfers.set(id, { fileName, button });
-  window.NeoAIAndroid.downloadLocalModel(id, url, fileName);
+  try {
+    const response = JSON.parse(window.NeoAIAndroid.downloadLocalModel(id, url, fileName) || "{}");
+    if (!response.ok) throw new Error(response.error || "下载任务无法启动");
+    const poll = window.NeoAIAndroid.getLocalModelDownloadState ? setInterval(() => {
+      const raw = window.NeoAIAndroid.getLocalModelDownloadState(id);
+      if (raw) window.__neoaiModelEvent(id, raw);
+    }, 800) : 0;
+    modelTransfers.set(id, { fileName, button, poll });
+  } catch (error) {
+    if (button) { button.disabled = false; button.textContent = "重试"; }
+    ui.localModelStatus.textContent = `无法开始下载：${error.message}`;
+  }
 }
 
 window.__neoaiModelEvent = (id, raw) => {
@@ -268,6 +285,7 @@ window.__neoaiModelEvent = (id, raw) => {
       ui.localModelStatus.textContent = event.total > 0 ? `正在下载 ${transfer.fileName}：${percent}%` : `正在下载 ${transfer.fileName}：${Math.round(event.bytes / 1048576)} MB`;
       if (transfer.button) transfer.button.textContent = event.total > 0 ? `${percent}%` : "下载中";
     } else {
+      if (transfer.poll) clearInterval(transfer.poll);
       modelTransfers.delete(id);
       if (event.ok) { ui.model.value = transfer.fileName; ui.localModelStatus.textContent = `${transfer.fileName} 下载完成，已选中`; }
       else ui.localModelStatus.textContent = `下载失败：${event.error || "未知错误"}`;

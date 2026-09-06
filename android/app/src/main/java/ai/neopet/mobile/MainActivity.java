@@ -35,6 +35,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ConcurrentHashMap;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -45,6 +46,7 @@ public class MainActivity extends Activity {
     private PermissionRequest pendingMediaRequest;
     private ValueCallback<Uri[]> pendingFileCallback;
     private final ExecutorService networkExecutor = Executors.newCachedThreadPool();
+    private final ConcurrentHashMap<String, String> modelDownloadStates = new ConcurrentHashMap<>();
     private LocalModelController localModelController;
 
     @Override public void onCreate(Bundle state) {
@@ -120,8 +122,25 @@ public class MainActivity extends Activity {
             return models.toString();
         }
 
-        @JavascriptInterface public void downloadLocalModel(String requestId, String urlValue, String fileName) {
-            networkExecutor.execute(() -> downloadModel(requestId, urlValue, fileName));
+        @JavascriptInterface public String downloadLocalModel(String requestId, String urlValue, String fileName) {
+            JSONObject result = new JSONObject();
+            try {
+                if (requestId == null || requestId.length() > 100) throw new IllegalArgumentException("下载任务编号无效");
+                URL url = new URL(urlValue);
+                if (!"https".equalsIgnoreCase(url.getProtocol())) throw new IllegalArgumentException("模型下载只允许 HTTPS");
+                safeModelFile(fileName);
+                JSONObject queued = new JSONObject(); queued.put("type", "progress"); queued.put("bytes", 0); queued.put("total", 0);
+                modelDownloadStates.put(requestId, queued.toString());
+                networkExecutor.execute(() -> downloadModel(requestId, urlValue, fileName));
+                result.put("ok", true);
+            } catch (Exception error) {
+                try { result.put("ok", false); result.put("error", error.getMessage() == null ? "下载任务无法启动" : error.getMessage()); } catch (Exception ignored) { }
+            }
+            return result.toString();
+        }
+
+        @JavascriptInterface public String getLocalModelDownloadState(String requestId) {
+            return modelDownloadStates.getOrDefault(requestId, "");
         }
 
         @JavascriptInterface public void requestLocalChat(String requestId, String modelName, String systemPrompt, String historyJson) {
@@ -313,23 +332,31 @@ public class MainActivity extends Activity {
             partial = new File(target.getParentFile(), target.getName() + ".part");
             if (target.isFile()) { sendModelEvent(requestId, true, "", target.length(), target.length()); return; }
             URL current = new URL(urlValue);
+            long existingBytes = partial.isFile() ? partial.length() : 0;
             for (int redirect = 0; redirect < 6; redirect++) {
                 if (!"https".equalsIgnoreCase(current.getProtocol())) throw new IllegalArgumentException("模型下载只允许 HTTPS");
                 connection = (HttpURLConnection) current.openConnection();
                 connection.setConnectTimeout(15000); connection.setReadTimeout(45000); connection.setInstanceFollowRedirects(false);
-                connection.setRequestProperty("User-Agent", "NeoAI-Android/0.7.0");
+                connection.setRequestProperty("User-Agent", "NeoAI-Android/0.7.1");
+                if (existingBytes > 0) connection.setRequestProperty("Range", "bytes=" + existingBytes + "-");
                 int status = connection.getResponseCode();
                 if (status >= 300 && status < 400) {
                     String location = connection.getHeaderField("Location"); connection.disconnect(); connection = null;
                     if (location == null) throw new IOException("下载地址重定向无效");
                     current = new URL(current, location); continue;
                 }
+                if (status == 416 && existingBytes > 0) {
+                    partial.delete(); existingBytes = 0; connection.disconnect(); connection = null; redirect--; continue;
+                }
                 if (status < 200 || status >= 300) throw new IOException("下载服务器返回 " + status);
-                long total = connection.getContentLengthLong();
+                boolean resumed = status == 206 && existingBytes > 0;
+                if (!resumed) existingBytes = 0;
+                long remaining = connection.getContentLengthLong();
+                long total = remaining > 0 ? existingBytes + remaining : -1;
                 if (total > 5_500_000_000L) throw new IOException("模型超过 5.5 GB，当前版本不支持");
-                if (total > 0 && modelDirectory().getUsableSpace() < total + 134_217_728L) throw new IOException("手机存储空间不足");
-                byte[] buffer = new byte[64 * 1024]; long bytes = 0, lastUpdate = 0;
-                try (InputStream input = connection.getInputStream(); FileOutputStream output = new FileOutputStream(partial, false)) {
+                if (remaining > 0 && modelDirectory().getUsableSpace() < remaining + 134_217_728L) throw new IOException("手机存储空间不足");
+                byte[] buffer = new byte[64 * 1024]; long bytes = existingBytes, lastUpdate = 0;
+                try (InputStream input = connection.getInputStream(); FileOutputStream output = new FileOutputStream(partial, resumed)) {
                     int count;
                     while ((count = input.read(buffer)) != -1) {
                         output.write(buffer, 0, count); bytes += count;
@@ -340,14 +367,16 @@ public class MainActivity extends Activity {
                 if (total > 0 && bytes != total) throw new IOException("下载不完整");
                 byte[] magic = new byte[4];
                 try (FileInputStream check = new FileInputStream(partial)) { if (check.read(magic) != 4) throw new IOException("模型文件无效"); }
-                if (magic[0] != 'G' || magic[1] != 'G' || magic[2] != 'U' || magic[3] != 'F') throw new IOException("下载内容不是 GGUF 模型");
+                if (magic[0] != 'G' || magic[1] != 'G' || magic[2] != 'U' || magic[3] != 'F') { partial.delete(); throw new IOException("下载内容不是 GGUF 模型"); }
                 if (!partial.renameTo(target)) throw new IOException("模型保存失败");
                 sendModelEvent(requestId, true, "", bytes, total); return;
             }
             throw new IOException("模型下载重定向过多");
         } catch (Exception error) {
-            if (partial != null && partial.exists()) partial.delete();
-            sendModelEvent(requestId, false, error.getMessage() == null ? "下载失败" : error.getMessage(), 0, 0);
+            long saved = partial != null && partial.exists() ? partial.length() : 0;
+            String message = error.getMessage() == null ? "下载失败" : error.getMessage();
+            if (saved > 0) message += "；已保留进度，点击重试可继续";
+            sendModelEvent(requestId, false, message, saved, 0);
         } finally { if (connection != null) connection.disconnect(); }
     }
 
@@ -364,6 +393,7 @@ public class MainActivity extends Activity {
     }
 
     private void sendModelJavascript(String requestId, JSONObject event) {
+        modelDownloadStates.put(requestId, event.toString());
         runOnUiThread(() -> { if (webView != null) webView.evaluateJavascript("window.__neoaiModelEvent(" + JSONObject.quote(requestId) + "," + JSONObject.quote(event.toString()) + ")", null); });
     }
 
