@@ -1,5 +1,5 @@
 const $ = (selector) => document.querySelector(selector);
-const APP_VERSION = "0.7.2";
+const APP_VERSION = "0.7.3";
 const CONFIG_KEY = "neoai-mobile-config-v1";
 const CHATS_KEY = "neoai-mobile-chats-v1";
 const ACTIVE_CHAT_KEY = "neoai-mobile-active-chat";
@@ -225,6 +225,15 @@ function localModelFiles() {
   catch { return []; }
 }
 
+function activateLocalModel(fileName) {
+  ui.provider.value = "ondevice";
+  ui.model.value = fileName;
+  config = { ...config, provider: "ondevice", model: fileName };
+  localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+  updateProviderHint();
+  renderConnection();
+}
+
 function renderLocalModelCatalog() {
   const installed = new Set(localModelFiles().map((item) => item.name));
   ui.localModelCatalog.replaceChildren(...LOCAL_MODEL_CATALOG.map((item) => {
@@ -243,7 +252,7 @@ function renderLocalModelCatalog() {
         location.assign(ANDROID_RELEASE_URL);
       });
     }
-    else if (installed.has(item.file)) { button.textContent = ui.model.value === item.file ? "使用中" : "选择"; button.disabled = ui.model.value === item.file; button.addEventListener("click", () => { ui.model.value = item.file; renderLocalModelCatalog(); }); }
+    else if (installed.has(item.file)) { button.textContent = ui.model.value === item.file ? "使用中" : "选择"; button.disabled = ui.model.value === item.file; button.addEventListener("click", () => { activateLocalModel(item.file); renderLocalModelCatalog(); }); }
     else { button.textContent = "下载"; button.addEventListener("click", () => downloadLocalModel(item.url, item.file, button)); }
     card.append(copy, button); return card;
   }));
@@ -288,7 +297,7 @@ window.__neoaiModelEvent = (id, raw) => {
       if (transfer.poll) clearInterval(transfer.poll);
       modelTransfers.delete(id);
       const message = event.ok ? `${transfer.fileName} 下载完成，已选中` : `下载失败：${event.error || "未知错误"}`;
-      if (event.ok) ui.model.value = transfer.fileName;
+      if (event.ok) activateLocalModel(transfer.fileName);
       renderLocalModelCatalog();
       ui.localModelStatus.textContent = message;
     }

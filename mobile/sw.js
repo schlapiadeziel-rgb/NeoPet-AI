@@ -1,4 +1,4 @@
-const CACHE = "neoai-mobile-v17";
+const CACHE = "neoai-mobile-v18";
 const ASSETS = [
   "./",
   "index.html",

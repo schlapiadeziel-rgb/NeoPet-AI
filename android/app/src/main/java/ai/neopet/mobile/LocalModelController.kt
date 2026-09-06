@@ -43,10 +43,13 @@ class LocalModelController(context: Context) {
                     val answer = StringBuilder()
                     engine.sendUserPrompt(conversation, 512).collect { answer.append(it) }
                     answer.toString()
+                        .replace(Regex("(?s)<think>.*?(?:</think>|$)\\s*"), "")
+                        .trim()
                 }
                 callback.accept(reply, null)
             } catch (error: Throwable) {
-                callback.accept(null, error.message ?: "本机推理失败")
+                val detail = error.message?.takeIf { it.isNotBlank() } ?: error.javaClass.simpleName
+                callback.accept(null, "本机推理失败：$detail")
             }
         }
     }
