@@ -119,6 +119,10 @@ public class MainActivity extends Activity {
             return installed.toString();
         }
 
+        @JavascriptInterface public String getAutomationTaskStatus() { return NeoAIAccessibilityService.getTaskStatus(); }
+
+        @JavascriptInterface public boolean cancelAutomationTask(String taskId) { return NeoAIAccessibilityService.cancelTask(taskId); }
+
         @JavascriptInterface public String listLocalModels() {
             JSONArray models = new JSONArray();
             File[] files = modelDirectory().listFiles((dir, name) -> name.toLowerCase().endsWith(".gguf") && !name.endsWith(".part"));
@@ -150,7 +154,7 @@ public class MainActivity extends Activity {
             return modelDownloadStates.getOrDefault(requestId, "");
         }
 
-        @JavascriptInterface public void requestLocalChat(String requestId, String modelName, String systemPrompt, String historyJson) {
+        @JavascriptInterface public void requestLocalChat(String requestId, String modelName, String systemPrompt, String historyJson, int maxTokens) {
             try {
                 File model = safeModelFile(modelName);
                 if (!model.isFile()) throw new IllegalArgumentException("请先在模型中心下载这个模型");
@@ -163,7 +167,7 @@ public class MainActivity extends Activity {
                     String content = safeText(item.optString("content"), 4000);
                     if (!content.isEmpty()) prompt.append(role).append("：").append(content).append('\n');
                 }
-                localModelController.generate(model, safeText(systemPrompt, 12000), prompt.toString(), (reply, error) -> runOnUiThread(() -> {
+                localModelController.generate(model, safeText(systemPrompt, 16000), prompt.toString(), bounded(maxTokens, 128, 1024), (reply, error) -> runOnUiThread(() -> {
                     JSONObject result = new JSONObject();
                     try { result.put("ok", error == null); if (error == null) result.put("reply", reply); else result.put("error", error); } catch (Exception ignored) { }
                     if (webView != null) webView.evaluateJavascript("window.__neoaiResolveLocalChat(" + JSONObject.quote(requestId) + "," + JSONObject.quote(result.toString()) + ")", null);
@@ -186,10 +190,12 @@ public class MainActivity extends Activity {
             JSONObject result = new JSONObject();
             try {
                 JSONObject args = new JSONObject(argsJson == null ? "{}" : argsJson);
-                if ("app_sequence".equals(action)) {
+                if ("app_sequence".equals(action) || "app_task".equals(action)) {
                     JSONArray steps = args.optJSONArray("steps");
                     if (!NeoAIAccessibilityService.isRunning()) throw new IllegalStateException("请先在设置中开启 NeoAI 跨 App 协助服务");
-                    if (steps == null || !NeoAIAccessibilityService.runSteps(steps)) throw new IllegalArgumentException("操作步骤无效");
+                    String taskId = safeText(args.optString("taskId", "task-" + System.currentTimeMillis()), 100);
+                    boolean started = "app_task".equals(action) ? NeoAIAccessibilityService.runTask(taskId, steps) : NeoAIAccessibilityService.runSteps(steps);
+                    if (steps == null || !started) throw new IllegalArgumentException("操作步骤无效");
                 } else {
                     Intent intent = buildActionIntent(action, args);
                     if (intent == null) throw new IllegalArgumentException("不支持的手机操作");
@@ -355,7 +361,7 @@ public class MainActivity extends Activity {
                 if (!"https".equalsIgnoreCase(current.getProtocol())) throw new IllegalArgumentException("模型下载只允许 HTTPS");
                 connection = (HttpURLConnection) current.openConnection();
                 connection.setConnectTimeout(15000); connection.setReadTimeout(45000); connection.setInstanceFollowRedirects(false);
-                connection.setRequestProperty("User-Agent", "NeoAI-Android/0.9.0");
+                connection.setRequestProperty("User-Agent", "NeoAI-Android/1.0.0");
                 if (existingBytes > 0) connection.setRequestProperty("Range", "bytes=" + existingBytes + "-");
                 int status = connection.getResponseCode();
                 if (status >= 300 && status < 400) {

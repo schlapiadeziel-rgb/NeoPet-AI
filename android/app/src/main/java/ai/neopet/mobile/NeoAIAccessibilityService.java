@@ -18,58 +18,102 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class NeoAIAccessibilityService extends AccessibilityService {
-    private static final Pattern SENSITIVE_SCREEN = Pattern.compile("密码|验证码|支付|转账|银行卡|信用卡|otp|password|payment|bank|credit card", Pattern.CASE_INSENSITIVE);
+    private static final Pattern SENSITIVE_SCREEN = Pattern.compile("密码|验证码|转账|银行卡|信用卡|收银台|确认支付|立即支付|付款码|otp|password|payment password|bank card|credit card|checkout", Pattern.CASE_INSENSITIVE);
     private static final Pattern BLOCKED_CLICK = Pattern.compile("删除|卸载|支付|购买|下单|转账|发送|发布|上传|提交|确认付款|订阅|注销|erase|delete|uninstall|pay|buy|purchase|transfer|send|publish|upload|submit|subscribe", Pattern.CASE_INSENSITIVE);
     private static volatile NeoAIAccessibilityService instance;
+    private static volatile String taskStatusJson = "{\"state\":\"idle\"}";
     private final Handler handler = new Handler(Looper.getMainLooper());
     private int runToken = 0;
+    private String currentTaskId = "";
+    private boolean taskRunning = false;
 
     public static boolean isRunning() { return instance != null; }
 
     public static boolean runSteps(JSONArray steps) {
+        return runTask("sequence-" + System.currentTimeMillis(), steps);
+    }
+
+    public static boolean runTask(String taskId, JSONArray steps) {
         NeoAIAccessibilityService service = instance;
-        if (service == null || steps == null || steps.length() == 0 || steps.length() > 8) return false;
-        service.startSequence(steps);
+        if (service == null || service.taskRunning || taskId == null || taskId.isEmpty() || taskId.length() > 100 || steps == null || steps.length() == 0 || steps.length() > 32) return false;
+        service.startTask(taskId, steps);
+        return true;
+    }
+
+    public static String getTaskStatus() { return taskStatusJson; }
+
+    public static boolean cancelTask(String taskId) {
+        NeoAIAccessibilityService service = instance;
+        if (service == null || !service.currentTaskId.equals(taskId)) return false;
+        service.finishTask("cancelled", "任务已由用户停止", false);
         return true;
     }
 
     @Override protected void onServiceConnected() { super.onServiceConnected(); instance = this; }
     @Override public void onAccessibilityEvent(AccessibilityEvent event) { }
-    @Override public void onInterrupt() { stopSequence("跨 App 协助已中断"); }
-    @Override public void onDestroy() { if (instance == this) instance = null; handler.removeCallbacksAndMessages(null); super.onDestroy(); }
+    @Override public void onInterrupt() { finishTask("failed", "跨 App 协助已中断", true); }
+    @Override public void onDestroy() { if (taskRunning) finishTask("failed", "无障碍服务已关闭，任务中断", false); if (instance == this) instance = null; handler.removeCallbacksAndMessages(null); super.onDestroy(); }
 
-    private void startSequence(JSONArray source) {
+    private void startTask(String taskId, JSONArray source) {
         final JSONArray steps;
         try { steps = new JSONArray(source.toString()); } catch (Exception error) { return; }
+        handler.removeCallbacksAndMessages(null);
+        currentTaskId = taskId;
+        taskRunning = true;
         int token = ++runToken;
-        executeStep(steps, 0, token);
+        updateTaskState("running", 0, steps.length(), "正在准备任务");
+        executeStep(steps, 0, token, 0);
     }
 
-    private void executeStep(JSONArray steps, int index, int token) {
-        if (token != runToken || index >= steps.length()) {
-            if (token == runToken) Toast.makeText(this, "NeoAI 跨 App 操作已完成", Toast.LENGTH_SHORT).show();
+    private void executeStep(JSONArray steps, int index, int token, int attempt) {
+        if (token != runToken) return;
+        if (index >= steps.length()) {
+            finishTask("complete", "长任务已完成", true);
             return;
         }
         try {
             JSONObject step = steps.getJSONObject(index);
             String action = step.optString("action");
-            if (!"open_app".equals(action) && isSensitiveScreen()) { stopSequence("检测到敏感界面，NeoAI 已停止操作"); return; }
+            updateTaskState("running", index + 1, steps.length(), stepLabel(action, step, attempt));
+            if (!"open_app".equals(action) && isSensitiveScreen()) { finishTask("failed", "检测到敏感界面，NeoAI 已停止操作", true); return; }
             boolean complete = true;
             long delay = 650;
             switch (action) {
-                case "open_app": complete = openKnownApp(step.optString("app")); delay = 1200; break;
-                case "click_text": complete = clickText(step.optString("text")); break;
+                case "open_app": complete = openKnownApp(step.optString("app")); delay = 1600; break;
+                case "click_text": complete = clickAnyText(step); break;
                 case "input_text": complete = inputText(step.optString("text")); break;
                 case "scroll_forward": complete = scroll(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD); break;
                 case "scroll_backward": complete = scroll(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD); break;
+                case "wait_for_text": complete = hasAnyText(step); delay = 450; break;
                 case "back": complete = performGlobalAction(GLOBAL_ACTION_BACK); break;
                 case "home": complete = performGlobalAction(GLOBAL_ACTION_HOME); break;
                 case "wait": delay = Math.max(200, Math.min(5000, step.optLong("milliseconds", 800))); break;
                 default: complete = false;
             }
-            if (!complete) { stopSequence("有一步无法安全执行，NeoAI 已停止"); return; }
-            handler.postDelayed(() -> executeStep(steps, index + 1, token), delay);
-        } catch (Exception error) { stopSequence("操作步骤无效，NeoAI 已停止"); }
+            if (!complete) {
+                int maxAttempts = "wait_for_text".equals(action) ? 12 : 4;
+                if (attempt + 1 < maxAttempts) { handler.postDelayed(() -> executeStep(steps, index, token, attempt + 1), delay); return; }
+                finishTask("failed", "第 " + (index + 1) + " 步找不到目标或无法安全执行", true); return;
+            }
+            handler.postDelayed(() -> executeStep(steps, index + 1, token, 0), delay);
+        } catch (Exception error) { finishTask("failed", "操作步骤无效，NeoAI 已停止", true); }
+    }
+
+    private String stepLabel(String action, JSONObject step, int attempt) {
+        String label;
+        switch (action) { case "open_app": label = "打开 " + step.optString("app"); break; case "click_text": label = "查找并点击"; break; case "input_text": label = "填写内容"; break; case "wait_for_text": label = "等待界面出现"; break; case "scroll_forward": label = "向下滚动"; break; case "scroll_backward": label = "向上滚动"; break; case "back": label = "返回"; break; case "home": label = "回到桌面"; break; default: label = "等待"; }
+        return attempt > 0 ? label + "（重试 " + attempt + "）" : label;
+    }
+
+    private void updateTaskState(String state, int step, int total, String message) {
+        JSONObject value = new JSONObject();
+        try { value.put("taskId", currentTaskId); value.put("state", state); value.put("step", step); value.put("total", total); value.put("message", message); value.put("updatedAt", System.currentTimeMillis()); } catch (Exception ignored) { }
+        taskStatusJson = value.toString();
+    }
+
+    private void finishTask(String state, String message, boolean toast) {
+        runToken++; taskRunning = false; handler.removeCallbacksAndMessages(null); updateTaskState(state, 0, 0, message);
+        if (toast) Toast.makeText(this, message, Toast.LENGTH_LONG).show();
     }
 
     private boolean openKnownApp(String app) {
@@ -115,6 +159,25 @@ public class NeoAIAccessibilityService extends AccessibilityService {
         return false;
     }
 
+    private boolean clickAnyText(JSONObject step) {
+        JSONArray alternatives = step.optJSONArray("texts");
+        if (alternatives != null) for (int index = 0; index < Math.min(5, alternatives.length()); index++) if (clickText(alternatives.optString(index))) return true;
+        return clickText(step.optString("text"));
+    }
+
+    private boolean hasAnyText(JSONObject step) {
+        JSONArray alternatives = step.optJSONArray("texts");
+        if (alternatives != null) for (int index = 0; index < Math.min(5, alternatives.length()); index++) if (hasText(alternatives.optString(index))) return true;
+        return hasText(step.optString("text"));
+    }
+
+    private boolean hasText(String text) {
+        String value = safeText(text, 80);
+        if (value.isEmpty() || SENSITIVE_SCREEN.matcher(value).find()) return false;
+        AccessibilityNodeInfo root = getRootInActiveWindow();
+        return root != null && !root.findAccessibilityNodeInfosByText(value).isEmpty();
+    }
+
     private boolean inputText(String text) {
         String value = safeText(text, 500);
         if (value.isEmpty() || SENSITIVE_SCREEN.matcher(value).find()) return false;
@@ -155,7 +218,6 @@ public class NeoAIAccessibilityService extends AccessibilityService {
         return false;
     }
 
-    private void stopSequence(String reason) { runToken++; handler.removeCallbacksAndMessages(null); Toast.makeText(this, reason, Toast.LENGTH_LONG).show(); }
     private String appPluginPackage(String id) {
         switch (id) {
             case "wechat": return "com.tencent.mm"; case "qq": return "com.tencent.mobileqq";

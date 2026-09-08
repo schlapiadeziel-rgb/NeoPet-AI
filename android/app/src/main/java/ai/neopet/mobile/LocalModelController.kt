@@ -22,7 +22,7 @@ class LocalModelController(context: Context) {
     private val mutex = Mutex()
     private var loadedModel = ""
 
-    fun generate(modelFile: File, systemPrompt: String, conversation: String, callback: BiConsumer<String?, String?>) {
+    fun generate(modelFile: File, systemPrompt: String, conversation: String, maxTokens: Int, callback: BiConsumer<String?, String?>) {
         scope.launch {
             try {
                 val reply = mutex.withLock {
@@ -41,7 +41,7 @@ class LocalModelController(context: Context) {
                         engine.resetConversation(systemPrompt)
                     }
                     val answer = StringBuilder()
-                    engine.sendUserPrompt(conversation, 512).collect { answer.append(it) }
+                    engine.sendUserPrompt(conversation, maxTokens.coerceIn(128, 1024)).collect { answer.append(it) }
                     answer.toString()
                         .replace(Regex("(?s)<think>.*?(?:</think>|$)\\s*"), "")
                         .trim()
