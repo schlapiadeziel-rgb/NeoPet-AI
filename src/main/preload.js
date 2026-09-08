@@ -18,12 +18,52 @@ contextBridge.exposeInMainWorld("neopet", {
   pet: {
     importAvatar: () => ipcRenderer.invoke("pet:import-avatar")
   },
+  companion: {
+    forgetFact: (id) => ipcRenderer.invoke("companion:forget-fact", id),
+    setProactive: (enabled) => ipcRenderer.invoke("companion:set-proactive", enabled),
+    clear: () => ipcRenderer.invoke("companion:clear"),
+    greeting: () => ipcRenderer.invoke("companion:greeting"),
+    exportData: () => ipcRenderer.invoke("companion:export"),
+    importData: () => ipcRenderer.invoke("companion:import")
+  },
+  care: {
+    action: (action) => ipcRenderer.invoke("care:action", action),
+    buy: (item) => ipcRenderer.invoke("care:buy", item)
+  },
+  achievement: { record: (event, value) => ipcRenderer.invoke("achievement:record", event, value) },
+  provider: { apply: (id) => ipcRenderer.invoke("provider:apply", id), listModels: () => ipcRenderer.invoke("provider:list-models") },
+  tools: {
+    addTodo: (text) => ipcRenderer.invoke("tools:todo-add", text),
+    toggleTodo: (id) => ipcRenderer.invoke("tools:todo-toggle", id),
+    deleteTodo: (id) => ipcRenderer.invoke("tools:todo-delete", id),
+    weather: (city) => ipcRenderer.invoke("tools:weather", city),
+    launch: () => ipcRenderer.invoke("tools:launch"),
+    translateClipboard: (language) => ipcRenderer.invoke("tools:translate-clipboard", language),
+    screenAsk: (question) => ipcRenderer.invoke("tools:screen-ask", question)
+  },
+  runtime: {
+    status: () => ipcRenderer.invoke("runtime:status"),
+    install: () => ipcRenderer.invoke("runtime:install"),
+    useOllama: () => ipcRenderer.invoke("runtime:use-ollama"),
+    transcribe: (bytes) => ipcRenderer.invoke("runtime:transcribe", bytes),
+    speak: (text) => ipcRenderer.invoke("runtime:speak", text)
+  },
   window: {
     setCompact: (compact) => ipcRenderer.invoke("window:set-compact", compact),
+    setRoaming: (enabled) => ipcRenderer.invoke("window:set-roaming", enabled),
     hide: () => ipcRenderer.invoke("window:hide"),
     toggleClickThrough: () => ipcRenderer.invoke("window:toggle-click-through"),
     beginDrag: () => ipcRenderer.invoke("window:begin-drag"),
-    moveTo: (x, y) => ipcRenderer.send("window:move-to", { x, y })
+    moveTo: (x, y) => ipcRenderer.send("window:move-to", { x, y }),
+    openMedia: () => ipcRenderer.invoke("window:open-media")
+  },
+  external: { open: (url) => ipcRenderer.invoke("external:open", url) },
+  update: {
+    version: () => ipcRenderer.invoke("update:version"),
+    check: () => ipcRenderer.invoke("update:check"),
+    download: () => ipcRenderer.invoke("update:download"),
+    install: () => ipcRenderer.invoke("update:install"),
+    onStatus: (callback) => ipcRenderer.on("update:status", (_event, value) => callback(value))
   },
   onOpenChat: (callback) => ipcRenderer.on("window:open-chat", callback)
 });

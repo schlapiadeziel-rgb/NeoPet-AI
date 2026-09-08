@@ -1,12 +1,14 @@
 {
   "name": "neopet-ai",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "AI desktop pet with voice, actions, cloud API, and optional local model endpoints",
   "main": "src/main/main.js",
   "license": "MIT",
   "author": "NeoPet AI",
   "scripts": {
     "start": "electron .",
+    "mobile:serve": "node scripts/serve-mobile.js",
+    "icons": "node scripts/generate-icons.js",
     "test": "node --test",
     "pack:dir": "electron-builder --dir",
     "pack:win": "electron-builder --win nsis portable",
@@ -14,11 +16,15 @@
     "pack:linux": "electron-builder --linux AppImage"
   },
   "dependencies": {
+    "@google/model-viewer": "^4.1.0",
+    "electron-updater": "^6.8.9",
     "nodemailer": "^9.0.5"
   },
   "devDependencies": {
     "electron": "^43.4.0",
-    "electron-builder": "^26.0.12"
+    "electron-builder": "^26.0.12",
+    "png-to-ico": "^3.0.2",
+    "sharp": "^0.35.4"
   },
   "build": {
     "appId": "ai.neopet.desktop",
@@ -29,10 +35,24 @@
     },
     "files": [
       "src/**/*",
+      "scripts/pyttsx3_speak.py",
+      "scripts/install-local-runtime.ps1",
       "package.json",
       "LICENSE"
     ],
+    "asarUnpack": [
+      "scripts/pyttsx3_speak.py",
+      "scripts/install-local-runtime.ps1"
+    ],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "schlapiadeziel-rgb",
+        "repo": "NeoPet-AI"
+      }
+    ],
     "win": {
+      "icon": "build/icon.ico",
       "target": [
         "nsis",
         "portable"
@@ -49,11 +69,15 @@
       "artifactName": "NeoPet-AI-Portable-${version}-${arch}.${ext}"
     },
     "mac": {
-      "target": ["dmg"],
+      "target": [
+        "dmg"
+      ],
       "category": "public.app-category.entertainment"
     },
     "linux": {
-      "target": ["AppImage"],
+      "target": [
+        "AppImage"
+      ],
       "category": "Utility"
     }
   }
