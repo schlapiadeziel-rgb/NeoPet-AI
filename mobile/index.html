@@ -75,6 +75,7 @@
             <section class="agent-card"><div class="agent-card-head"><div><span class="agent-kicker">FILES</span><h2>工作区文件</h2></div><label class="agent-import">＋ 添加<input id="workspaceFileInput" type="file" accept=".txt,.md,.json,.csv,.js,.ts,.html,.css,.py,.java,.kt" /></label></div><p class="agent-help">文本文件保存在当前工作区，可在后续对话中持续使用。</p><div id="workspaceFileList" class="workspace-file-list"></div></section>
             <section class="agent-card"><div class="agent-card-head"><div><span class="agent-kicker">MEMORY</span><h2>长期记忆</h2></div><button id="clearMemoryButton" class="quiet-danger" type="button">清空</button></div><p class="agent-help">只保存你明确写入的资料，并作为背景信息提供给模型。</p><form id="memoryForm" class="memory-form"><input id="memoryInput" maxlength="240" placeholder="例如：我偏好简体中文和简洁回答" /><button type="submit">记住</button></form><div id="memoryList" class="memory-list"></div></section>
             <section class="agent-card"><div class="agent-card-head"><div><span class="agent-kicker">TOOLS</span><h2>工具与安全</h2></div><span class="safety-pill">确认后执行</span></div><div id="toolStatusList" class="tool-status-list"></div></section>
+            <section class="agent-card"><div class="agent-card-head"><div><span class="agent-kicker">APP PLUGINS</span><h2>App 控制插件</h2></div><span id="appPluginCount" class="count-pill">0 可用</span></div><p class="agent-help">启用后 AI 可打开对应 App；进一步操作仍受无障碍权限、逐次确认和敏感操作拦截保护。</p><div id="appPluginList" class="app-plugin-list"></div></section>
             <section class="agent-card"><div class="agent-card-head"><div><span class="agent-kicker">ACTIVITY</span><h2>执行记录</h2></div><button id="clearActivityButton" class="quiet-danger" type="button">清空</button></div><p class="agent-help">记录实际确认执行的工具，不把模型建议误记为已完成。</p><div id="activityList" class="activity-list"></div></section>
           </div>
         </section>
@@ -139,7 +140,7 @@
         </section>
         <section>
           <h3>应用更新</h3>
-          <p id="updateStatus" class="hint">当前版本：0.8.2</p>
+          <p id="updateStatus" class="hint">当前版本：0.9.0</p>
           <div class="settings-actions"><button id="checkUpdateButton" type="button">检查更新</button><button id="openUpdateButton" type="button" class="hidden">打开下载页</button></div>
         </section>
         <p id="settingsStatus" class="status" role="status"></p>

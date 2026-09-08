@@ -26,3 +26,13 @@ test("browser search is encoded by web and Android implementations", () => {
   assert.match(source, /encodeURIComponent\(args\.query/);
   assert.match(android, /Uri\.encode\(safeText\(args\.optString\("query"\), 300\)\)/);
 });
+
+test("app control plugins are allowlisted in web, manifest and native service", () => {
+  assert.match(source, /const APP_PLUGINS = \[/);
+  assert.match(source, /enabledAppPlugins/);
+  assert.match(source, /app_launch/);
+  assert.match(android, /getInstalledAppPlugins/);
+  const service = fs.readFileSync(path.join(__dirname, "..", "android", "app", "src", "main", "java", "ai", "neopet", "mobile", "NeoAIAccessibilityService.java"), "utf8");
+  assert.match(service, /appPluginPackage/);
+  assert.match(service, /BLOCKED_CLICK/);
+});

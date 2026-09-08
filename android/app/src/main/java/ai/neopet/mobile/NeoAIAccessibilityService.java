@@ -19,7 +19,7 @@ import org.json.JSONObject;
 
 public class NeoAIAccessibilityService extends AccessibilityService {
     private static final Pattern SENSITIVE_SCREEN = Pattern.compile("密码|验证码|支付|转账|银行卡|信用卡|otp|password|payment|bank|credit card", Pattern.CASE_INSENSITIVE);
-    private static final Pattern BLOCKED_CLICK = Pattern.compile("删除|卸载|支付|购买|下单|转账|发送|确认付款|订阅|注销|erase|delete|uninstall|pay|buy|purchase|transfer|send|subscribe", Pattern.CASE_INSENSITIVE);
+    private static final Pattern BLOCKED_CLICK = Pattern.compile("删除|卸载|支付|购买|下单|转账|发送|发布|上传|提交|确认付款|订阅|注销|erase|delete|uninstall|pay|buy|purchase|transfer|send|publish|upload|submit|subscribe", Pattern.CASE_INSENSITIVE);
     private static volatile NeoAIAccessibilityService instance;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private int runToken = 0;
@@ -86,7 +86,12 @@ public class NeoAIAccessibilityService extends AccessibilityService {
             case "gallery": intent = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_APP_GALLERY); break;
             case "camera": intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE); break;
             case "settings": intent = new Intent(Settings.ACTION_SETTINGS); break;
-            default: return false;
+            default: {
+                String packageName = appPluginPackage(app);
+                if (packageName == null) return false;
+                intent = getPackageManager().getLaunchIntentForPackage(packageName);
+                if (intent == null) return false;
+            }
         }
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         if (intent.resolveActivity(getPackageManager()) == null) return false;
@@ -151,5 +156,18 @@ public class NeoAIAccessibilityService extends AccessibilityService {
     }
 
     private void stopSequence(String reason) { runToken++; handler.removeCallbacksAndMessages(null); Toast.makeText(this, reason, Toast.LENGTH_LONG).show(); }
+    private String appPluginPackage(String id) {
+        switch (id) {
+            case "wechat": return "com.tencent.mm"; case "qq": return "com.tencent.mobileqq";
+            case "douyin": return "com.ss.android.ugc.aweme"; case "kuaishou": return "com.smile.gifmaker";
+            case "bilibili": return "tv.danmaku.bili"; case "xiaohongshu": return "com.xingin.xhs";
+            case "taobao": return "com.taobao.taobao"; case "jd": return "com.jingdong.app.mall";
+            case "alipay": return "com.eg.android.AlipayGphone"; case "meituan": return "com.sankuai.meituan";
+            case "eleme": return "me.ele"; case "amap": return "com.autonavi.minimap";
+            case "baidumap": return "com.baidu.BaiduMap"; case "doubao": return "com.larus.nova";
+            case "deepseek": return "com.deepseek.chat"; case "wps": return "cn.wps.moffice_eng";
+            default: return null;
+        }
+    }
     private String safeText(String value, int max) { String text = value == null ? "" : value.trim(); return text.substring(0, Math.min(text.length(), max)); }
 }

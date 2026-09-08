@@ -112,6 +112,13 @@ public class MainActivity extends Activity {
             return NeoAIAccessibilityService.isRunning();
         }
 
+        @JavascriptInterface public String getInstalledAppPlugins() {
+            JSONObject installed = new JSONObject();
+            String[] ids = {"wechat", "qq", "douyin", "kuaishou", "bilibili", "xiaohongshu", "taobao", "jd", "alipay", "meituan", "eleme", "amap", "baidumap", "doubao", "deepseek", "wps"};
+            for (String id : ids) try { installed.put(id, getPackageManager().getLaunchIntentForPackage(appPluginPackage(id)) != null); } catch (Exception ignored) { }
+            return installed.toString();
+        }
+
         @JavascriptInterface public String listLocalModels() {
             JSONArray models = new JSONArray();
             File[] files = modelDirectory().listFiles((dir, name) -> name.toLowerCase().endsWith(".gguf") && !name.endsWith(".part"));
@@ -226,6 +233,11 @@ public class MainActivity extends Activity {
                 .putExtra("sms_body", safeText(args.optString("text"), 1000));
             case "share": return Intent.createChooser(new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, safeText(args.optString("text"), 4000)), "选择分享目标");
             case "browser_search": return new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=" + Uri.encode(safeText(args.optString("query"), 300))));
+            case "app_launch": {
+                Intent intent = getPackageManager().getLaunchIntentForPackage(appPluginPackage(args.optString("app")));
+                if (intent == null) throw new IllegalStateException("手机上没有安装这个 App");
+                return intent;
+            }
             case "url": {
                 Uri uri = Uri.parse(args.optString("url"));
                 if (!"http".equals(uri.getScheme()) && !"https".equals(uri.getScheme())) return null;
@@ -343,7 +355,7 @@ public class MainActivity extends Activity {
                 if (!"https".equalsIgnoreCase(current.getProtocol())) throw new IllegalArgumentException("模型下载只允许 HTTPS");
                 connection = (HttpURLConnection) current.openConnection();
                 connection.setConnectTimeout(15000); connection.setReadTimeout(45000); connection.setInstanceFollowRedirects(false);
-                connection.setRequestProperty("User-Agent", "NeoAI-Android/0.8.2");
+                connection.setRequestProperty("User-Agent", "NeoAI-Android/0.9.0");
                 if (existingBytes > 0) connection.setRequestProperty("Range", "bytes=" + existingBytes + "-");
                 int status = connection.getResponseCode();
                 if (status >= 300 && status < 400) {
@@ -404,6 +416,19 @@ public class MainActivity extends Activity {
     }
 
     private int bounded(int value, int min, int max) { return Math.max(min, Math.min(max, value)); }
+    private String appPluginPackage(String id) {
+        switch (id) {
+            case "wechat": return "com.tencent.mm"; case "qq": return "com.tencent.mobileqq";
+            case "douyin": return "com.ss.android.ugc.aweme"; case "kuaishou": return "com.smile.gifmaker";
+            case "bilibili": return "tv.danmaku.bili"; case "xiaohongshu": return "com.xingin.xhs";
+            case "taobao": return "com.taobao.taobao"; case "jd": return "com.jingdong.app.mall";
+            case "alipay": return "com.eg.android.AlipayGphone"; case "meituan": return "com.sankuai.meituan";
+            case "eleme": return "me.ele"; case "amap": return "com.autonavi.minimap";
+            case "baidumap": return "com.baidu.BaiduMap"; case "doubao": return "com.larus.nova";
+            case "deepseek": return "com.deepseek.chat"; case "wps": return "cn.wps.moffice_eng";
+            default: throw new IllegalArgumentException("App 插件无效");
+        }
+    }
     private String safeText(String value, int max) { String text = value == null ? "" : value.trim(); return text.substring(0, Math.min(text.length(), max)); }
     private String safePhone(String value) { return safeText(value, 40).replaceAll("[^+0-9#*() \\-]", ""); }
 }
