@@ -225,6 +225,7 @@ public class MainActivity extends Activity {
             case "sms": return new Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:" + Uri.encode(safePhone(args.optString("number")))))
                 .putExtra("sms_body", safeText(args.optString("text"), 1000));
             case "share": return Intent.createChooser(new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, safeText(args.optString("text"), 4000)), "选择分享目标");
+            case "browser_search": return new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=" + Uri.encode(safeText(args.optString("query"), 300))));
             case "url": {
                 Uri uri = Uri.parse(args.optString("url"));
                 if (!"http".equals(uri.getScheme()) && !"https".equals(uri.getScheme())) return null;
@@ -342,7 +343,7 @@ public class MainActivity extends Activity {
                 if (!"https".equalsIgnoreCase(current.getProtocol())) throw new IllegalArgumentException("模型下载只允许 HTTPS");
                 connection = (HttpURLConnection) current.openConnection();
                 connection.setConnectTimeout(15000); connection.setReadTimeout(45000); connection.setInstanceFollowRedirects(false);
-                connection.setRequestProperty("User-Agent", "NeoAI-Android/0.8.1");
+                connection.setRequestProperty("User-Agent", "NeoAI-Android/0.8.2");
                 if (existingBytes > 0) connection.setRequestProperty("Range", "bytes=" + existingBytes + "-");
                 int status = connection.getResponseCode();
                 if (status >= 300 && status < 400) {
