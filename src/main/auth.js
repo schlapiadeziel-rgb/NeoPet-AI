@@ -37,6 +37,9 @@ class OtpService {
     const host = process.env.NEOPET_SMTP_HOST || "smtp.qq.com";
     const user = process.env.NEOPET_SMTP_USER || "";
     const pass = process.env.NEOPET_SMTP_PASS || "";
+    if (this.development && process.env.NEOPET_DEV_SEND_EMAIL !== "1") {
+      return { sent: false, developmentCode: code };
+    }
     if (!user || !pass) {
       if (this.development) return { sent: false, developmentCode: code };
       this.pending.delete(target);

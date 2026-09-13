@@ -2,6 +2,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { pathToFileURL } = require("node:url");
 const { parseAssistantEnvelope } = require("../shared/response");
+const { memoryContext } = require("../shared/companion");
 
 async function requestJson(url, options) {
   const controller = new AbortController();
@@ -25,19 +26,21 @@ async function requestJson(url, options) {
   }
 }
 
-function buildSystemPrompt(pet) {
-  return `你是名为“${pet.name}”的 AI 桌面宠物。性格：${pet.personality}\n使用用户正在使用的语言简洁回答。不要声称看到了未提供的内容。只输出一个 JSON 对象，不要使用 Markdown：{"reply":"回答内容","emotion":"neutral|happy|sad|excited|shy|angry|curious","action":"idle|wave|nod|dance|sleep|think|speak|happy"}。动作必须符合回答语义。`;
+function buildSystemPrompt(pet, companion) {
+  return `你是名为“${pet.name}”的 AI 桌面宠物。性格：${pet.personality}\n${memoryContext(companion)}\n自然利用这些记忆，但不要机械重复，也不要编造不存在的记忆。使用用户正在使用的语言简洁回答。不要声称看到了未提供的内容。只输出一个 JSON 对象，不要使用 Markdown：{"reply":"回答内容","emotion":"neutral|happy|sad|excited|shy|angry|curious","action":"idle|wave|nod|dance|sleep|think|speak|happy"}。动作必须符合回答语义。`;
 }
 
-async function chat({ config, apiKey, pet, messages }) {
-  if (!config.baseUrl || !config.model || !apiKey) throw new Error("请先在设置中填写 API 地址、模型名称和 API 密钥");
+async function chat({ config, apiKey, pet, companion, messages }) {
+  if (!config.baseUrl || !config.model) throw new Error("请先在设置中填写 API 地址和模型名称");
+  const headers = { "Content-Type": "application/json" };
+  if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
   const body = await requestJson(`${config.baseUrl}/chat/completions`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+    headers,
     body: JSON.stringify({
       model: config.model,
       temperature: 0.8,
-      messages: [{ role: "system", content: buildSystemPrompt(pet) }, ...messages.slice(-20)]
+      messages: [{ role: "system", content: buildSystemPrompt(pet, companion) }, ...messages.slice(-20)]
     })
   });
   const content = body.choices?.[0]?.message?.content;
@@ -45,13 +48,31 @@ async function chat({ config, apiKey, pet, messages }) {
   return parseAssistantEnvelope(content);
 }
 
+async function vision({ config, apiKey, imageDataUrl, question }) {
+  if (!config.baseUrl || !config.model) throw new Error("请先配置支持视觉的模型");
+  const headers = { "Content-Type": "application/json" };
+  if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
+  const body = await requestJson(`${config.baseUrl}/chat/completions`, {
+    method: "POST", headers,
+    body: JSON.stringify({ model: config.model, messages: [{ role: "user", content: [
+      { type: "text", text: String(question || "请说明屏幕上的主要内容").slice(0, 500) },
+      { type: "image_url", image_url: { url: imageDataUrl, detail: "low" } }
+    ] }] })
+  });
+  const content = body.choices?.[0]?.message?.content;
+  if (typeof content !== "string") throw new Error("视觉模型没有返回结果");
+  return content;
+}
+
 async function generatePet({ config, apiKey, prompt, outputDirectory }) {
-  if (!config.baseUrl || !config.imageModel || !apiKey) throw new Error("请先填写 API 地址、图像模型和 API 密钥");
+  if (!config.baseUrl || !config.imageModel) throw new Error("请先填写 API 地址和图像模型");
   const safePrompt = String(prompt || "").trim().slice(0, 1500);
   if (!safePrompt) throw new Error("请描述想生成的宠物");
+  const headers = { "Content-Type": "application/json" };
+  if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
   const body = await requestJson(`${config.baseUrl}/images/generations`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+    headers,
     body: JSON.stringify({
       model: config.imageModel,
       prompt: `Create one original full-body desktop pet character on a transparent background. Centered, no text, clean silhouette, suitable for subtle animation. Use the following only as high-level inspiration and do not copy copyrighted characters: ${safePrompt}`,
@@ -75,4 +96,4 @@ async function generatePet({ config, apiKey, prompt, outputDirectory }) {
   return pathToFileURL(file).href;
 }
 
-module.exports = { chat, generatePet };
+module.exports = { buildSystemPrompt, chat, vision, generatePet };

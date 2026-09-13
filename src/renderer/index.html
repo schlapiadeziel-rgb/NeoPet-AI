@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' file: data: https:; style-src 'self'; script-src 'self'; media-src 'self' file: data:">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' file: data: blob: https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'wasm-unsafe-eval'; media-src 'self' file: data: blob: https:; connect-src 'self' file: data: blob: https:">
   <title>NeoPet AI</title>
   <link rel="stylesheet" href="style.css">
 </head>
@@ -14,6 +14,7 @@
       <p class="eyebrow">NEOPET AI</p>
       <h1>唤醒你的 AI 桌宠</h1>
       <p class="muted">使用邮箱验证码进入，让桌宠记住你们的对话和设定。</p>
+      <div class="auth-features"><span>长期记忆</span><span>语音互动</span><span>自由模型</span></div>
       <label>邮箱</label>
       <input id="emailInput" type="email" autocomplete="email" placeholder="name@example.com">
       <button id="sendCodeButton" class="primary">发送验证码</button>
@@ -28,7 +29,7 @@
 
   <main id="petView" class="screen pet-screen hidden">
     <header class="titlebar glass">
-      <div class="drag-region"><span class="online-dot"></span><strong id="petTitle">小诺</strong></div>
+      <div class="drag-region"><span class="online-dot"></span><div><strong id="petTitle">小诺</strong><small>你的 AI 陪伴伙伴</small></div></div>
       <nav class="window-actions">
         <button id="compactButton" class="icon-button" title="只显示桌宠">◌</button>
         <button id="settingsButton" class="icon-button" title="设置">⚙</button>
@@ -37,26 +38,34 @@
     </header>
 
     <section id="petStage" class="pet-stage state-idle" data-emotion="neutral">
+      <div class="scene-orb orb-one"></div><div class="scene-orb orb-two"></div>
+      <div class="home-status"><span id="homeRelationshipStage">初识</span><span id="homeMood">平静</span><span id="homeMemoryCount">0 条记忆</span></div>
+      <div class="compact-hud glass"><span id="compactMood">平静</span><strong>Lv.<b id="compactLevel">1</b></strong><i><b id="compactHunger"></b></i></div>
+      <div id="petContextMenu" class="pet-context-menu hidden"><button data-pet-command="feed">🍖 喂食</button><button data-pet-command="play">🎭 玩耍</button><button data-pet-command="chat">💬 聊天</button><button data-pet-command="settings">⚙ 设置</button></div>
       <div id="speechBubble" class="speech-bubble hidden"></div>
-      <div id="defaultPet" class="pet-art" role="button" tabindex="0" aria-label="AI 桌宠">
-        <div class="tail"></div>
-        <div class="body"><div class="belly"></div></div>
-        <div class="arm arm-left"></div><div class="arm arm-right"></div>
-        <div class="head">
-          <div class="ear ear-left"></div><div class="ear ear-right"></div>
-          <div class="face">
-            <div class="eye eye-left"></div><div class="eye eye-right"></div>
-            <div class="blush blush-left"></div><div class="blush blush-right"></div>
-            <div class="mouth"></div>
-          </div>
-        </div>
-        <div class="shadow"></div>
-      </div>
+      <div id="defaultPet" class="pet-art sprite-pet" role="button" tabindex="0" aria-label="AI 桌宠小诺"></div>
       <img id="customPet" class="custom-pet hidden" alt="自定义 AI 桌宠">
+      <model-viewer id="petModel" class="pet-model hidden" camera-controls autoplay interaction-prompt="none" shadow-intensity="0" alt="3D AI 桌宠"></model-viewer>
       <p id="petStateLabel" class="pet-state-label">空闲</p>
     </section>
 
-    <section id="chatPanel" class="glass chat-panel">
+    <section class="quick-actions" aria-label="快捷操作">
+      <button id="touchButton" class="quick-action" type="button"><span aria-hidden="true">♡</span>摸摸</button>
+      <button id="waveButton" class="quick-action" type="button"><span aria-hidden="true">◌</span>挥手</button>
+      <button id="quickMicButton" class="quick-action" type="button"><span aria-hidden="true">◉</span>说话</button>
+    </section>
+    <section class="care-card glass" aria-label="宠物状态">
+      <div class="care-heading"><strong>Lv.<span id="careLevel">1</span></strong><span><b id="careCoins">120</b> 金币</span></div>
+      <div class="care-meters"><button data-care="feed"><span>饱腹</span><i><b id="careHunger"></b></i></button><button data-care="rest"><span>精力</span><i><b id="careEnergy"></b></i></button><button data-care="play"><span>开心</span><i><b id="careHappiness"></b></i></button><button data-care="bath"><span>清洁</span><i><b id="careCleanliness"></b></i></button></div>
+    </section>
+
+    <section class="compact-controls" aria-label="桌宠控制">
+      <button id="compactMicButton" class="compact-control" type="button" title="和小诺说话" aria-label="和小诺说话">◉</button>
+      <button id="compactChatButton" class="compact-control" type="button" title="展开聊天" aria-label="展开聊天">⌃</button>
+    </section>
+
+    <section id="chatPanel" class="glass chat-panel hidden">
+      <header class="chat-heading"><div><strong>和 <span id="chatPetName">小诺</span> 聊天</strong><small>会记住重要的事，也会用动作回应你</small></div><span class="privacy-chip">本地记忆</span></header>
       <div id="messages" class="messages" aria-live="polite">
         <div class="message pet-message">你好，我会听、会说，也会根据回答做动作。</div>
       </div>
@@ -70,19 +79,31 @@
     <aside id="settingsPanel" class="glass settings-panel hidden">
       <div class="panel-heading"><div><p class="eyebrow">CONTROL CENTER</p><h2>桌宠设置</h2></div><button id="closeSettingsButton" class="icon-button">×</button></div>
       <div class="settings-scroll">
+        <section class="setting-group account-card">
+          <h3>账户中心</h3>
+          <div class="account-row"><span class="account-avatar">@</span><div><strong id="accountEmail">未登录</strong><small id="accountStatus">邮箱验证账户</small></div></div>
+          <button id="switchAccountButton" class="secondary full-button" type="button">切换或重新登录</button>
+        </section>
         <section class="setting-group">
           <h3>角色</h3>
+          <div id="petPicker" class="pet-picker" role="radiogroup" aria-label="选择宠物"></div>
           <label>名字</label><input id="petNameInput" maxlength="30">
           <label>性格和说话方式</label><textarea id="personalityInput" rows="3"></textarea>
           <div class="button-row"><button id="importAvatarButton" class="secondary" type="button">导入图片</button><button id="restoreAvatarButton" class="secondary" type="button">恢复默认</button></div>
+          <label>3D 模型网址（GLB/GLTF/VRM）</label><input id="modelUrlInput" type="url" placeholder="https://example.com/pet.glb">
+          <label class="file-button">导入本地 3D/VRM 模型<input id="modelFileInput" type="file" accept=".glb,.gltf,.vrm,model/gltf-binary,model/gltf+json"></label>
+          <p class="hint">真 3D 支持触摸旋转和模型自带动画；悬浮窗自动使用省电动作图。</p>
         </section>
         <section class="setting-group">
           <h3>AI 接口</h3>
+          <label>模型提供商</label><select id="providerSelect"><option value="api">默认 API</option><option value="ollama">Ollama（本地）</option><option value="lmstudio">LM Studio（本地）</option><option value="llamacpp">llama.cpp（本地）</option><option value="custom">自定义</option></select>
           <label>OpenAI 兼容 API 地址</label><input id="baseUrlInput" placeholder="https://api.openai.com/v1">
-          <label>聊天模型</label><input id="modelInput" placeholder="填写服务商提供的模型名称">
+          <label>聊天模型</label><input id="modelInput" list="modelSuggestions" placeholder="自由填写服务商提供的模型名称">
+          <datalist id="modelSuggestions"><option value="gpt-4.1-mini"></option><option value="qwen2.5:3b"></option><option value="gemma3:4b"></option><option value="llama3.2:3b"></option></datalist>
           <label>图像模型</label><input id="imageModelInput" placeholder="用于生成桌宠，可暂时留空">
           <label>API 密钥</label><input id="apiKeyInput" type="password" placeholder="已加密保存在系统安全存储">
           <p id="apiKeyHint" class="hint"></p>
+          <button id="refreshModelsButton" class="secondary full-button" type="button">读取可用模型列表</button>
         </section>
         <section class="setting-group">
           <h3>AI 生成桌宠</h3>
@@ -92,16 +113,67 @@
         </section>
         <section class="setting-group">
           <h3>声音</h3>
+          <label>本地语音识别</label><select id="sttProviderSelect"><option value="system">系统语音识别</option><option value="whisper">Whisper Tiny（离线）</option></select>
+          <label>本地朗读</label><select id="ttsProviderSelect"><option value="system">系统朗读</option><option value="pyttsx3">pyttsx3（离线）</option><option value="kokoro">Kokoro（接口预留）</option></select>
+          <label>回复与识别语言</label><select id="languageSelect"><option value="auto">自动识别</option><option value="zh-CN">中文</option><option value="en-US">English</option><option value="ja-JP">日本語</option><option value="ko-KR">한국어</option></select>
           <label>系统声音</label><select id="voiceSelect"><option value="">自动选择</option></select>
           <label>语速 <span id="speechRateValue">1.0</span></label><input id="speechRateInput" type="range" min="0.7" max="1.5" step="0.1" value="1">
+          <label class="toggle-row"><input id="wakeWordEnabled" type="checkbox">启用唤醒词监听（会持续使用麦克风）</label>
+          <label>唤醒词</label><input id="wakeWordInput" maxlength="20" value="小诺">
+          <label class="toggle-row"><input id="roamEnabled" type="checkbox">允许紧凑桌宠在桌面边缘漫游</label>
+          <button id="installRuntimeButton" class="primary" type="button">应用内安装离线套件（约 2.4GB）</button>
+          <div class="button-row"><button id="ollamaPresetButton" class="secondary" type="button">使用 Ollama + Gemma 3 1B</button><button id="runtimeStatusButton" class="secondary" type="button">检测本地组件</button></div>
+          <p id="runtimeStatus" class="hint">尚未检测本地组件</p>
+        </section>
+        <section class="setting-group">
+          <h3>陪伴与记忆</h3>
+          <div class="bond-card">
+            <div><strong id="relationshipStage">初识</strong><span id="relationshipStats">信任 0 · 连续 0 天</span></div>
+            <div class="bond-track"><i id="bondProgress"></i></div>
+          </div>
+          <label class="toggle-row"><input id="proactiveEnabled" type="checkbox">允许宠物在合适的时候主动问候</label>
+          <h4>记住的事情</h4>
+          <div id="memoryFacts" class="memory-list"><p class="hint">还没有长期记忆</p></div>
+          <h4>陪伴日记</h4>
+          <div id="companionDiary" class="memory-list"><p class="hint">日记会随着相处逐渐出现</p></div>
+          <div class="button-row"><button id="exportMemoryButton" class="secondary" type="button">备份数据</button><button id="importMemoryButton" class="secondary" type="button">导入备份</button></div>
+          <button id="clearCompanionButton" class="secondary danger full-button" type="button">清除全部陪伴数据</button>
+        </section>
+        <section class="setting-group">
+          <h3>成就墙</h3>
+          <p id="achievementSummary" class="hint">0 / 9 已解锁</p>
+          <div id="achievementList" class="achievement-grid"></div>
+        </section>
+        <section class="setting-group">
+          <h3>宠物商店</h3>
+          <p class="hint">互动和升级可获得金币。库存：食物 <b id="foodCount">0</b> · 零食 <b id="snackCount">0</b> · 清洁用品 <b id="soapCount">0</b></p>
+          <div class="shop-grid"><button class="secondary" data-buy="food">食物 ×3<br><small>15 金币</small></button><button class="secondary" data-buy="snack">零食 ×2<br><small>12 金币</small></button><button class="secondary" data-buy="soap">清洁 ×2<br><small>10 金币</small></button></div>
+        </section>
+        <section class="setting-group">
+          <h3>效率与感知工具</h3>
+          <label>待办事项</label><div class="inline-tool"><input id="todoInput" maxlength="100" placeholder="今天要做什么"><button id="todoAddButton" class="secondary">添加</button></div><div id="todoList" class="tool-results"></div>
+          <label>专注计时（分钟）</label><div class="inline-tool"><input id="focusMinutesInput" type="number" min="1" max="180" value="25"><button id="focusButton" class="secondary">开始</button></div><p id="focusStatus" class="hint">尚未开始</p>
+          <label>天气城市</label><div class="inline-tool"><input id="weatherCityInput" placeholder="例如：上海"><button id="weatherButton" class="secondary">查询</button></div><p id="weatherResult" class="hint"></p>
+          <button id="launchButton" class="secondary full-button">选择并启动本机程序</button>
+          <label>剪贴板翻译目标语言</label><div class="inline-tool"><input id="translateLanguageInput" value="中文"><button id="translateButton" class="secondary">翻译</button></div><p id="translateResult" class="hint"></p>
+          <label>屏幕问答（仅点击时截取一次，不保存图片）</label><div class="inline-tool"><input id="screenQuestionInput" placeholder="屏幕上有什么？"><button id="screenAskButton" class="secondary">询问</button></div><p id="screenResult" class="hint"></p>
+        </section>
+        <section class="setting-group">
+          <h3>应用更新</h3>
+          <p id="updateStatus" class="hint">当前版本：读取中…</p>
+          <div class="button-row"><button id="checkUpdateButton" class="secondary" type="button">检查更新</button><button id="downloadUpdateButton" class="primary hidden" type="button">下载更新</button></div>
+          <button id="installUpdateButton" class="primary full-button hidden" type="button">重启并安装</button>
+          <p class="hint">只在你点击后下载或安装，不会静默更新。</p>
         </section>
         <button id="saveSettingsButton" class="primary" type="button">保存设置</button>
+        <button id="mediaCenterButton" class="secondary" type="button">打开视频中心</button>
         <button id="clearMemoryButton" class="secondary danger" type="button">清除对话记忆</button>
-        <button id="logoutButton" class="text-button" type="button">退出当前邮箱</button>
+        <button id="logoutButton" class="text-button" type="button">退出登录</button>
         <p id="settingsStatus" class="status"></p>
       </div>
     </aside>
   </main>
+  <script src="vendor/model-viewer.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
