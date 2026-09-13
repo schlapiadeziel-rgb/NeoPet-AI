@@ -194,8 +194,10 @@ public class MainActivity extends Activity {
                     JSONArray steps = args.optJSONArray("steps");
                     if (!NeoAIAccessibilityService.isRunning()) throw new IllegalStateException("请先在设置中开启 NeoAI 跨 App 协助服务");
                     String taskId = safeText(args.optString("taskId", "task-" + System.currentTimeMillis()), 100);
-                    boolean started = "app_task".equals(action) ? NeoAIAccessibilityService.runTask(taskId, steps) : NeoAIAccessibilityService.runSteps(steps);
-                    if (steps == null || !started) throw new IllegalArgumentException("操作步骤无效");
+                    if ("app_sequence".equals(action) && (steps == null || steps.length() > 8)) throw new IllegalArgumentException("短操作必须为 1 至 8 步");
+                    boolean started = NeoAIAccessibilityService.runTask(taskId, steps);
+                    if (!started) throw new IllegalArgumentException("任务未启动：步骤无效、包含不安全操作，或已有任务正在执行");
+                    result.put("taskId", taskId);
                 } else {
                     Intent intent = buildActionIntent(action, args);
                     if (intent == null) throw new IllegalArgumentException("不支持的手机操作");

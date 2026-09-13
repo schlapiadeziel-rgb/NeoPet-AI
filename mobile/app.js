@@ -1,5 +1,5 @@
 const $ = (selector) => document.querySelector(selector);
-const APP_VERSION = "1.0.0";
+const APP_VERSION = "1.0.1";
 const CONFIG_KEY = "neoai-mobile-config-v1";
 const CHATS_KEY = "neoai-mobile-chats-v1";
 const ACTIVE_CHAT_KEY = "neoai-mobile-active-chat";
@@ -191,14 +191,15 @@ function renderConversations() {
   }));
 }
 
-function renderMessages() {
+function renderMessages(preserveScroll = false) {
+  const scrollTop = ui.messages.scrollTop;
   const chat = activeChat();
   const messages = chat?.messages || [];
   ui.welcome.classList.toggle("hidden", messages.length > 0);
   ui.messages.classList.toggle("hidden", messages.length === 0);
   ui.messages.replaceChildren(...messages.map((message) => messageElement(chat.id, message)));
   ui.title.textContent = chat?.title || "新任务";
-  requestAnimationFrame(() => { ui.messages.scrollTop = ui.messages.scrollHeight; });
+  requestAnimationFrame(() => { ui.messages.scrollTop = preserveScroll ? scrollTop : ui.messages.scrollHeight; });
 }
 
 function messageElement(chatId, message) {
@@ -228,7 +229,7 @@ function toolCard(chatId, message) {
   const button = document.createElement("button");
   button.type = "button";
   const taskState = message.tool.taskState;
-  button.textContent = taskState === "running" ? "停止任务" : taskState === "complete" ? "已完成" : taskState === "failed" ? "重新执行" : message.tool.executed ? "已打开" : "确认执行";
+  button.textContent = taskState === "running" ? "停止任务" : taskState === "complete" ? "步骤已执行" : ["failed", "cancelled"].includes(taskState) ? "从头重试" : message.tool.executed ? "已打开" : "确认执行";
   button.disabled = taskState === "complete" || (Boolean(message.tool.executed) && !taskState);
   button.addEventListener("click", () => executeSuggestedAction(chatId, message.id));
   card.append(info, button);
@@ -239,7 +240,7 @@ function describeTool(tool) {
   if (tool.name === "app_launch") return `将打开 ${APP_PLUGINS.find((app) => app.id === tool.args.app)?.name || tool.args.app}；进一步操作需要再次确认。`;
   if (!["app_sequence", "app_task"].includes(tool.name)) return ACTIONS[tool.name].description;
   const labels = { open_app: "打开应用", click_text: "点击文字", input_text: "填写内容", wait_for_text: "等待界面", scroll_forward: "向下滚动", scroll_backward: "向上滚动", back: "返回", home: "回到桌面", wait: "等待" };
-  const progress = tool.taskState === "running" ? `进度 ${tool.progressStep || 0}/${tool.progressTotal || tool.args.steps?.length || 0} · ${tool.progressMessage || "正在执行"}。` : tool.taskState === "failed" ? `上次中断：${tool.progressMessage || "目标不可用"}。` : "";
+  const progress = tool.taskState ? `已执行 ${tool.completedSteps || 0}/${tool.progressTotal || tool.args.steps?.length || 0} 步 · ${tool.progressMessage || "正在准备"}。` : "";
   return progress + (tool.args.steps || []).map((step, index) => `${index + 1}. ${labels[step.action] || step.action}${step.text ? `：${step.text}` : step.texts?.length ? `：${step.texts.join("/")}` : step.app ? `：${step.app}` : ""}`).join(" · ");
 }
 
@@ -507,8 +508,15 @@ function validateAssistantForRequest(parsed, requestText) {
 function deterministicToolForRequest(value) {
   const text = String(value || "").trim();
   const wantsOpen = /打开|进入|前往|设置|开启|open|settings?/i.test(text);
+  const namedApps = APP_PLUGINS.filter((item) => new RegExp(item.aliases, "i").test(text));
+  const disabledApp = namedApps.find((item) => !appPluginEnabled(item.id));
+  if (disabledApp && wantsOpen) return { reply: `“${disabledApp.name}”插件已关闭，请先在智能体页面开启。`, tool: null };
+  const multiStep = /然后|再(?:打开|进入|点击|输入|搜索|返回)|依次|接着|最后|完成.*任务|\bthen\b|\bafter\b/i.test(text) || namedApps.length > 1;
+  if (multiStep) return null;
   const search = text.match(/(?:用|打开)?(?:浏览器|网页)?(?:搜索|查询|search for)\s*[：:]?\s*(.+)/i);
-  if (toolEnabled("browser_search") && search?.[1]?.trim()) return { reply: `可以，确认后我会在浏览器中搜索“${search[1].trim().slice(0, 80)}”。`, tool: { name: "browser_search", args: { query: search[1].trim().slice(0, 300) }, executed: false } };
+  if (!namedApps.length && !/地图|导航|路线|map/i.test(text) && toolEnabled("browser_search") && search?.[1]?.trim()) return { reply: `可以，确认后我会在浏览器中搜索“${search[1].trim().slice(0, 80)}”。`, tool: { name: "browser_search", args: { query: search[1].trim().slice(0, 300) }, executed: false } };
+  const wantsMoreThanLaunch = /搜索|查询|点击|填写|输入|找到|关注|点赞|播放|滑动|滚动|search|click|type|scroll/i.test(text);
+  if (wantsMoreThanLaunch) return null;
   if (toolEnabled("wifi_settings") && wantsOpen && /(?:wi[\s-]?fi|wlan|无线网络)/i.test(text)) return { reply: "可以，确认后我会打开手机的 Wi‑Fi 设置。", tool: { name: "wifi_settings", args: {}, executed: false } };
   if (toolEnabled("bluetooth_settings") && wantsOpen && /蓝牙|bluetooth/i.test(text)) return { reply: "可以，确认后我会打开手机的蓝牙设置。", tool: { name: "bluetooth_settings", args: {}, executed: false } };
   if (toolEnabled("wechat") && wantsOpen && /微信|wechat/i.test(text)) {
@@ -518,7 +526,6 @@ function deterministicToolForRequest(value) {
       : "我可以先打开微信；选择联系人和最终发送必须由你确认。";
     return { reply, tool: { name: "wechat", args: {}, executed: false } };
   }
-  const wantsMoreThanLaunch = /搜索|查询|点击|填写|输入|找到|关注|点赞|播放|滑动|滚动|search|click|type|scroll/i.test(text);
   if (toolEnabled("app_launch") && wantsOpen && !wantsMoreThanLaunch) {
     const app = APP_PLUGINS.find((item) => item.id !== "wechat" && appPluginEnabled(item.id) && new RegExp(item.aliases, "i").test(text));
     if (app) return { reply: `可以，确认后我会打开 ${app.name}。进一步操作仍需确认，敏感操作不会自动执行。`, tool: { name: "app_launch", args: { app: app.id }, executed: false } };
@@ -561,11 +568,11 @@ function validateTool(tool, requestText = "") {
   if (["dial", "sms"].includes(tool.name)) clean.number = String(args.number || "").replace(/[^+0-9#*\s()-]/g, "").slice(0, 40);
   if (tool.name === "sms") clean.text = cleanText(args.text, 1000);
   if (tool.name === "share") clean.text = cleanText(args.text, 4000);
-  if (tool.name === "browser_search") { clean.query = cleanText(args.query, 300); if (!clean.query) return null; }
+  if (tool.name === "browser_search") { if (APP_PLUGINS.some((app) => new RegExp(app.aliases, "i").test(requestText)) && !/浏览器|网页|browser/i.test(requestText)) return null; clean.query = cleanText(args.query, 300); if (!clean.query) return null; }
   if (tool.name === "url") { try { const url = new URL(String(args.url || "")); if (!["http:", "https:"].includes(url.protocol)) return null; clean.url = url.href; } catch { return null; } }
   if (tool.name === "app_launch") { clean.app = cleanText(args.app, 24); if (!enabledAppIds().includes(clean.app)) return null; }
   if (["app_sequence", "app_task"].includes(tool.name)) {
-    if (tool.name === "app_task") clean.goal = cleanText(args.goal, 240);
+    if (tool.name === "app_task") { clean.goal = cleanText(args.goal, 240); if (!clean.goal) return null; }
     clean.steps = sanitizeAutomationSteps(args.steps, tool.name === "app_task" ? 32 : 8);
     if (!clean.steps.length) return null;
   }
@@ -576,16 +583,34 @@ function clampNumber(value, min, max, fallback) { const number = Number(value); 
 function cleanText(value, max) { return String(value || "").trim().slice(0, max); }
 
 function sanitizeAutomationSteps(steps, limit) {
+  if (!Array.isArray(steps) || !steps.length || steps.length > limit) return [];
   const allowedSteps = new Set(["open_app", "wait_for_text", "click_text", "input_text", "scroll_forward", "scroll_backward", "back", "home", "wait"]);
   const allowedApps = new Set(["browser", "email", "maps", "music", "calendar", "contacts", "calculator", "files", "gallery", "camera", "settings", ...enabledAppIds()]);
-  return (Array.isArray(steps) ? steps : []).slice(0, limit).map((step) => {
-    const action = allowedSteps.has(step?.action) ? step.action : ""; if (!action) return null; const item = { action };
-    if (action === "open_app") { item.app = cleanText(step.app, 20); if (!allowedApps.has(item.app)) return null; }
-    if (action === "input_text") { item.text = cleanText(step.text, 500); if (!item.text) return null; }
-    if (["click_text", "wait_for_text"].includes(action)) { item.text = cleanText(step.text, 80); item.texts = (Array.isArray(step.texts) ? step.texts : []).map((value) => cleanText(value, 80)).filter(Boolean).slice(0, 5); if (!item.text && !item.texts.length) return null; }
-    if (action === "wait") item.milliseconds = clampNumber(step.milliseconds, 200, 5000, 800);
-    return item;
-  }).filter(Boolean);
+  const dependencies = { browser: ["browser_search", "url"], maps: ["map"], calendar: ["calendar"], camera: ["camera"], settings: ["system_settings"], wechat: ["wechat"] };
+  const sensitive = /密码|验证码|转账|银行卡|信用卡|收银台|确认支付|立即支付|付款码|otp|password|payment password|bank card|credit card|checkout/i;
+  const blockedClick = /删除|卸载|支付|购买|下单|转账|发送|发布|上传|提交|确认付款|订阅|注销|erase|delete|uninstall|pay|buy|purchase|transfer|send|publish|upload|submit|subscribe/i;
+  const validText = (text, max) => typeof text === "string" && text.trim().length > 0 && text.length <= max;
+  const result = []; let hasTarget = false;
+  for (const step of steps) {
+    const action = step?.action; if (!allowedSteps.has(action)) return []; const item = { action };
+    if (action === "open_app") {
+      if (!allowedApps.has(step.app) || dependencies[step.app]?.some((id) => !toolEnabled(id))) return [];
+      item.app = step.app; hasTarget = true;
+    } else if (action === "home") hasTarget = false;
+    else if (action !== "wait" && !hasTarget) return [];
+    if (action === "input_text") { if (!validText(step.text, 500) || sensitive.test(step.text)) return []; item.text = step.text.trim(); }
+    if (["click_text", "wait_for_text"].includes(action)) {
+      if (step.texts !== undefined && (!Array.isArray(step.texts) || step.texts.length > 5)) return [];
+      const candidates = [...(step.text !== undefined && step.text !== "" ? [step.text] : []), ...(step.texts || [])];
+      const blocked = action === "click_text" ? blockedClick : sensitive;
+      if (!candidates.length || candidates.some((text) => !validText(text, 80) || blocked.test(text))) return [];
+      if (step.text) item.text = step.text.trim();
+      if (step.texts?.length) item.texts = step.texts.map((text) => text.trim());
+    }
+    if (action === "wait") { const ms = step.milliseconds ?? 800; if (!Number.isInteger(ms) || ms < 200 || ms > 5000) return []; item.milliseconds = ms; }
+    result.push(item);
+  }
+  return result;
 }
 
 async function executeSuggestedAction(chatId, messageId) {
@@ -593,36 +618,56 @@ async function executeSuggestedAction(chatId, messageId) {
   const message = chat?.messages.find((item) => item.id === messageId);
   if (!message?.tool || !ACTIONS[message.tool.name]) return;
   const action = ACTIONS[message.tool.name];
-  if (message.tool.name === "app_task" && message.tool.taskState === "running") {
-    if (!confirm("停止当前长任务？")) return;
+  const automation = ["app_task", "app_sequence"].includes(message.tool.name);
+  if (automation && message.tool.taskState === "running") {
+    if (!confirm("停止当前任务？已经完成的操作不会自动撤销。")) return;
     if (!window.NeoAIAndroid?.cancelAutomationTask?.(message.tool.taskId)) alert("任务已经结束或无法停止");
     syncAutomationStatus(); return;
   }
   if (message.tool.executed && message.tool.taskState !== "failed") return;
   if (!toolEnabled(message.tool.name)) { alert(`“${action.label}”已在智能体工具权限中关闭。`); return; }
-  if (!confirm(`${action.label}\n\n${action.description}\n\n是否继续？`)) return;
+  if (message.tool.name === "app_launch" && !enabledAppIds().includes(message.tool.args.app)) { alert("此 App 插件已关闭，请重新生成计划。"); return; }
+  if (automation) {
+    const steps = sanitizeAutomationSteps(message.tool.args.steps, message.tool.name === "app_task" ? 32 : 8);
+    if (!steps.length) { alert("计划含无效或不安全步骤，或相关权限已关闭。整项任务未执行，请重新规划。"); return; }
+    message.tool.args.steps = steps;
+    if (chats.some((item) => item.messages.some((entry) => entry.tool?.taskState === "running"))) { alert("请先停止或等待当前任务结束，再开始新任务。"); return; }
+  }
+  const retry = ["failed", "cancelled"].includes(message.tool.taskState) ? `\n注意：上次已执行 ${message.tool.completedSteps || 0} 步。本次将从头开始，可能重复已完成操作，请先检查当前页面。\n` : "";
+  if (!confirm(`${action.label}\n\n${describeTool(message.tool)}\n${retry}\n是否继续？`)) return;
   try {
-    if (message.tool.name === "app_task") { message.tool.taskId = `task-${Date.now()}-${++requestSequence}`; message.tool.args.taskId = message.tool.taskId; message.tool.taskState = "running"; message.tool.progressStep = 0; message.tool.progressTotal = message.tool.args.steps.length; message.tool.progressMessage = "正在准备任务"; persistChats(); }
+    if (automation) { message.tool.taskId = `task-${Date.now()}-${++requestSequence}`; message.tool.args.taskId = message.tool.taskId; message.tool.taskState = "running"; message.tool.activityLogged = false; message.tool.executed = false; message.tool.completedSteps = 0; message.tool.progressStep = 0; message.tool.progressTotal = message.tool.args.steps.length; message.tool.progressMessage = "正在准备任务"; persistChats(); }
     await executePhoneAction(message.tool.name, message.tool.args || {});
-    if (message.tool.name === "app_task") { startAutomationPolling(); renderMessages(); return; }
+    if (automation) { startAutomationPolling(); renderMessages(true); return; }
     message.tool.executed = true; agentState.activity.push({ id: crypto.randomUUID(), workspaceId: chat.workspaceId || agentState.activeWorkspaceId, label: action.label, ok: true, at: new Date().toISOString() }); persistAgent(); persistChats(); renderMessages();
-  } catch (error) { if (message.tool.name === "app_task") { message.tool.taskState = "failed"; message.tool.progressMessage = String(error.message || "操作失败").slice(0, 160); persistChats(); renderMessages(); } agentState.activity.push({ id: crypto.randomUUID(), workspaceId: chat.workspaceId || agentState.activeWorkspaceId, label: action.label, ok: false, error: String(error.message || "操作失败").slice(0, 160), at: new Date().toISOString() }); persistAgent(); alert(`无法执行：${error.message}`); }
+  } catch (error) { if (automation) { message.tool.taskState = "failed"; message.tool.activityLogged = true; message.tool.progressMessage = String(error.message || "操作失败").slice(0, 160); persistChats(); renderMessages(true); } agentState.activity.push({ id: crypto.randomUUID(), workspaceId: chat.workspaceId || agentState.activeWorkspaceId, label: action.label, ok: false, error: String(error.message || "操作失败").slice(0, 160), at: new Date().toISOString() }); persistAgent(); alert(`无法执行：${error.message}`); }
 }
 
-function startAutomationPolling() { if (automationPoll || !window.NeoAIAndroid?.getAutomationTaskStatus) return; automationPoll = setInterval(syncAutomationStatus, 900); syncAutomationStatus(); }
+function hasRunningAutomation() { return chats.some((chat) => chat.messages.some((message) => ["app_task", "app_sequence"].includes(message.tool?.name) && message.tool.taskState === "running")); }
+function startAutomationPolling() {
+  if (!window.NeoAIAndroid?.getAutomationTaskStatus) return;
+  syncAutomationStatus();
+  if (!automationPoll && hasRunningAutomation()) automationPoll = setInterval(syncAutomationStatus, 900);
+}
 
 function syncAutomationStatus() {
   if (!window.NeoAIAndroid?.getAutomationTaskStatus) return;
   let status; try { status = JSON.parse(window.NeoAIAndroid.getAutomationTaskStatus() || "{}"); } catch { return; }
-  if (!status.taskId) return;
+  if (!status || typeof status !== "object") return;
   let changed = false;
   for (const chat of chats) for (const message of chat.messages) {
-    const tool = message.tool; if (!tool || tool.name !== "app_task" || tool.taskId !== status.taskId) continue;
-    tool.taskState = status.state; tool.progressStep = status.step || 0; tool.progressTotal = status.total || tool.progressTotal || 0; tool.progressMessage = cleanText(status.message, 180); changed = true;
-    if (["complete", "failed", "cancelled"].includes(status.state) && !tool.activityLogged) { tool.executed = status.state === "complete"; tool.activityLogged = true; agentState.activity.push({ id: crypto.randomUUID(), workspaceId: chat.workspaceId || agentState.activeWorkspaceId, label: `${ACTIONS.app_task.label}：${cleanText(tool.args.goal, 80) || "跨 App 任务"}`, ok: status.state === "complete", error: status.state === "complete" ? "" : tool.progressMessage, at: new Date().toISOString() }); persistAgent(); }
+    const tool = message.tool; if (!tool || !["app_task", "app_sequence"].includes(tool.name) || !tool.taskId) continue;
+    const before = JSON.stringify(tool);
+    if (tool.taskId === status.taskId && ["running", "complete", "failed", "cancelled"].includes(status.state)) {
+      tool.taskState = status.state; tool.progressStep = status.step || 0; tool.progressTotal = status.total || tool.progressTotal || 0; tool.completedSteps = status.completedSteps ?? (status.state === "complete" ? tool.progressTotal : 0); tool.progressMessage = cleanText(status.message, 180);
+    } else if (tool.taskState === "running") {
+      tool.taskState = "failed"; tool.progressMessage = "执行服务已重启或记录已变化，任务未确认完成。请检查实际进度后重新规划。";
+    }
+    if (["complete", "failed", "cancelled"].includes(tool.taskState) && !tool.activityLogged) { tool.executed = tool.taskState === "complete"; tool.activityLogged = true; agentState.activity.push({ id: crypto.randomUUID(), workspaceId: chat.workspaceId || agentState.activeWorkspaceId, taskId: tool.taskId, label: `${ACTIONS[tool.name].label}：${cleanText(tool.args.goal, 80) || "跨 App 任务"}`, ok: tool.taskState === "complete", error: tool.taskState === "complete" ? "" : tool.progressMessage, at: new Date().toISOString() }); agentState.activity = agentState.activity.slice(-100); persistAgent(); }
+    changed ||= JSON.stringify(tool) !== before;
   }
-  if (changed) { persistChats(); renderMessages(); }
-  if (["complete", "failed", "cancelled"].includes(status.state) && automationPoll) { clearInterval(automationPoll); automationPoll = 0; }
+  if (changed) { persistChats(); renderMessages(true); }
+  if (!hasRunningAutomation() && automationPoll) { clearInterval(automationPoll); automationPoll = 0; }
 }
 
 async function executePhoneAction(name, args) {
@@ -766,7 +811,8 @@ ui.input.addEventListener("keydown", (event) => { if (event.key === "Enter" && !
 ui.mic.addEventListener("click", () => recognition ? recognition.start() : ui.input.focus());
 ui.removeAttachment.addEventListener("click", resetComposer);
 ui.accessibilityButton.addEventListener("click", () => { if (window.NeoAIAndroid?.openAccessibilitySettings) window.NeoAIAndroid.openAccessibilitySettings(); });
-window.addEventListener("focus", () => { refreshAccessibilityStatus(); syncAutomationStatus(); });
+window.addEventListener("focus", () => { refreshAccessibilityStatus(); startAutomationPolling(); });
+document.addEventListener("visibilitychange", () => { if (!document.hidden) startAutomationPolling(); });
 ui.file.addEventListener("change", async () => { try { await handleFile(ui.file.files?.[0]); } catch (error) { alert(error.message); resetComposer(); } });
 
 document.querySelectorAll("[data-prompt]").forEach((button) => button.addEventListener("click", () => setComposerPrompt(button.dataset.prompt)));
@@ -834,4 +880,4 @@ if ("serviceWorker" in navigator) window.addEventListener("load", () => navigato
 
 setupRecognition();
 renderAll();
-syncAutomationStatus();
+startAutomationPolling();
